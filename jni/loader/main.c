@@ -12,7 +12,7 @@ void init()
     void* handle = dlopen("/data/data/com.and.games505.TerrariaPaid/files/payload.so", RTLD_NOW); // для теста пусть будет в корневой папке
     if (!handle)
     {
-        LOGI("Failde to load payload.so! %s", dlerror());
+        LOGI("Failed to load payload.so! %s", dlerror());
         return;
     }
 
