@@ -1,6 +1,7 @@
 #include "hook.h"
 #include "../log.h"
-#include "Il2CppAPI.h"
+#include "Il2Cpp/Il2CppAPI.h"
+#include "Il2Cpp/Il2CppResolver.h"
 #include <sys/mman.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -139,7 +140,7 @@ void InstallDynamicHooks(std::vector<HookTarget> hooks)
 {
     for (const auto& target: hooks)
     {
-        void* method_info = IL2CPP::FindMethod(
+        void* method_info = IL2CPP::Resolver::FindMethod(
             target.assembly, target.namezpace,
             target.klass, target.method,
             target.argsCount

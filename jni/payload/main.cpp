@@ -10,7 +10,7 @@
 #include "crash.h"
 #include "imgui.h"
 #include "SDK/SDK.h"
-#include "SDK/Il2CppAPI.h"
+#include "SDK/Il2Cpp/Il2CppAPI.h"
 #include "backends/imgui_impl_opengl3.h"
 
 
@@ -23,7 +23,7 @@ void InitAllMods()
     std::vector<HookTarget> hooks = 
     {
         { "Assembly-CSharp", "Terraria", "Player", "Hurt", -1, (void*)my_Player_Hurt, (void**)&original_Player_Hurt },
-        { "Assembly-CSharp", "Terraria.Chat", "ChatHelper", "SendChatMessageFromClient", -1, (void*)my_SendChat, (void**)&orig_SendChat }
+        { "Assembly-CSharp", "Terraria.Chat", "ChatCommandProcessor", "ProcessIncomingMessage", -1, (void*)my_ProcessIncomingMessage, (void**)&orig_ProcessIncomingMessage }
     };
 
     InstallDynamicHooks(hooks);

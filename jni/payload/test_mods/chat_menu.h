@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-typedef void (*t_SendChat)(void* chatMessage);
-extern t_SendChat orig_SendChat;
+typedef void (*t_ProcessIncomingMessage)(void* instance, void* chatMessage, int clientID);
+extern t_ProcessIncomingMessage orig_ProcessIncomingMessage;
 
-void my_SendChat(void* chatMessage);
+void my_ProcessIncomingMessage(void* instance, void* chatMessage, int clientID);

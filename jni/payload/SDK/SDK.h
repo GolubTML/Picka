@@ -9,6 +9,11 @@ struct Color
     uint8_t b;
 };
 
+struct Vector2 
+{
+    float x;
+    float y;
+};
 
 namespace SDK
 {

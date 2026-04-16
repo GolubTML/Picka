@@ -1,11 +1,12 @@
 #include "SDK.h"
-#include "Il2CppAPI.h"
+#include "Il2Cpp/Il2CppAPI.h"
+#include "Il2Cpp/Il2CppResolver.h"
 #include "../log.h"
 #include <dlfcn.h>
 
 void SDK::Init(uintptr_t base)
 {
-    void* newText_fn = IL2CPP::FindMethod("Assembly-CSharp", "Terraria", "Main", "NewText", 4);
+    void* newText_fn = IL2CPP::Resolver::FindMethod("Assembly-CSharp", "Terraria", "Main", "NewText", 4);
 
     if (newText_fn) 
     {

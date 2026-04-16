@@ -11,6 +11,7 @@ $CLANGPP -shared -fPIC -O2 -DIMGUI_IMPL_OPENGL_ES3 \
     jni/payload/*.cpp \
     jni/payload/test_mods/*.cpp \
     jni/payload/SDK/*.cpp \
+    jni/payload/SDK/Il2Cpp/*.cpp \
     jni/imgui/imgui*.cpp \
     jni/imgui/backends/imgui_impl_opengl3.cpp \
     -I. \
