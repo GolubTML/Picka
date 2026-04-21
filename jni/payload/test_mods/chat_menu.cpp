@@ -43,8 +43,7 @@ void* GetLocalPlayer()
     LOGI("Fields: %p, %p", myPlayer_field, player_field);
     void* static_data = IL2CPP::get_static_field_data(main_klass);
     
-    int myPlayerIdx = *(int*)((uintptr_t)static_data + 0x424);
-    // IL2CPP::field_get_value(main_obj, myPlayer_field, &myPlayerIdx);
+    int myPlayerIdx = *(int*)((uintptr_t)static_data + 0x424); // wtf, why i can't allocate myPlayer field? but it static in the class..
 
     void* playerArray = nullptr;
     IL2CPP::field_static_get_value(player_field, &playerArray);

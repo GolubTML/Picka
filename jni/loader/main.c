@@ -12,8 +12,19 @@ void init()
     void* handle = dlopen("/data/data/com.and.games505.TerrariaPaid/files/payload.so", RTLD_NOW); // для теста пусть будет в корневой папке
     if (!handle)
     {
-        LOGI("Failed to load payload.so! %s", dlerror());
-        return;
+        LOGI("Maybe, payload.so in apk?..");
+
+        handle = dlopen("payload.so", RTLD_NOW);
+
+        if (!handle)
+        {
+            LOGI("Failed to load payload.so! %s", dlerror());
+            return;
+        }   
+        else
+        {
+            LOGI("yep, payload.so in apk");
+        }
     }
 
     void (*payload_init)() = dlsym(handle, "payload_init");

@@ -21,6 +21,12 @@ namespace IL2CPP
                 return val;
             }
 
+            template <typename T>
+            static void SetFieldValue(void* instance, void* fieldInfo, T value)
+            {   
+                field_set_value(instance, fieldInfo, &value);
+            }
+
             static size_t GetFieldOffset(void* klass, const char* fieldName);
             static std::string GetString(void* il2cpp_string); // idk why, but mono_string_to_utf8_checked doesnt work, so, let's make our own
     };

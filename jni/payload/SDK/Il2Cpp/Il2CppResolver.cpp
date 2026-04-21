@@ -82,8 +82,8 @@ namespace IL2CPP
 
             while ((field = class_get_fields(current, &iter)))
             {
-                const char* internalName = field_get_name(field);
-                LOGI("Class Main has field: %s", internalName);
+                // const char* internalName = field_get_name(field);
+                // LOGI("Class Main has field: %s", internalName);
 
                 if (strcmp(field_get_name(field), fieldName) == 0)
                 {

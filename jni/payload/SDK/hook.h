@@ -6,6 +6,11 @@
 int is_adrp(uint32_t instr);
 uintptr_t calc_adrp_target(uintptr_t pc, uint32_t instr);
 int get_adrp_reg(uint32_t instr);
+
+int is_ldr_literal(uint32_t instr);
+uintptr_t calc_ldr_target(uintptr_t pc, uint32_t instr);
+int get_ldr_reg(uint32_t instr);
+
 int write_abs_load(uint32_t* dst, int reg, uintptr_t addr);
 
 

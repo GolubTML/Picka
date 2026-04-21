@@ -28,6 +28,24 @@ int get_adrp_reg(uint32_t instr)
     return instr & 0x1F;
 }
 
+
+int is_ldr_literal(uint32_t instr)
+{
+    return (instr & 0xBF000000) == 0x18000000;
+}
+
+uintptr_t calc_ldr_target(uintptr_t pc, uint32_t instr)
+{
+    int64_t imm19 = (instr >> 5) & 0x7FFFF;
+    if (imm19 & 0x40000) imm19 |=  ~0x7FFFF;
+    return pc + (imm19 << 2);
+}
+
+int get_ldr_reg(uint32_t instr)
+{
+    return instr & 0x1F;
+}
+
 int write_abs_load(uint32_t* dst, int reg, uintptr_t addr)
 {
     dst[0] = 0xD2800000 | ((addr & 0xFFFF) << 5) | reg;
@@ -66,6 +84,16 @@ int hook_function(uintptr_t target, uintptr_t hook, uintptr_t* original, int cou
             LOGI("Fixing adrp at offset %d: reg=x%d target=0x%lx", copied, reg, adrp_result);
 
             tramp_idx += write_abs_load(&trampoline[tramp_idx], reg, adrp_result);
+        }
+        else if (is_ldr_literal(instr))
+        {
+            uintptr_t ldr_target = calc_ldr_target(instr_pc, instr);
+            int reg = get_ldr_reg(instr);
+
+            uintptr_t actual_value = *(uintptr_t*)ldr_target;
+            LOGI("Fixing LDR literal at offset %d: reg=x%d target=0x%lx, value=0x%lx", copied, reg, ldr_target, actual_value);
+
+            tramp_idx += write_abs_load(&trampoline[tramp_idx], reg, actual_value);
         }
         else
         {
