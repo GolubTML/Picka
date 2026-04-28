@@ -7,6 +7,7 @@
 
 #include "SDK/hook.h"
 #include "Menu/NativeMenu.h"
+#include "Menu/FloatButton.h"
 #include "log.h"
 #include "crash.h"
 #include "SDK/SDK.h"
@@ -20,13 +21,96 @@
 
 JavaVM* g_vm = nullptr;
 std::unique_ptr<NativeMenu> menu;
+std::unique_ptr<FloatButton> floatBtn;
 
 typedef void (*t_Main_Update)(void* gameTime);
 t_Main_Update orig_Main_Update;
 
+typedef Vector3 (*t_get_mousePosition)();
+typedef bool (*t_GetMouseButton)(int);
+typedef int (*t_get_ScreenValue)();
+
+t_get_mousePosition get_mousePosition = nullptr;
+t_GetMouseButton get_mouseButton = nullptr;
+t_get_ScreenValue get_screenWidth = nullptr;
+t_get_ScreenValue get_screenHeight = nullptr;
+
+// I will fix all of this shit, i promise
+
+void InitUnityInput()
+{
+    void* inputKlass = IL2CPP::Resolver::FindClass("UnityEngine", "UnityEngine", "Input");
+    void* screenKlass = IL2CPP::Resolver::FindClass("UnityEngine", "UnityEngine", "Screen"); // TODO: make IL2CPP::Resolver::FindMethod with class it self, not with assemblies, namezpace, klass.. 
+
+    if (inputKlass) 
+    {
+        void* mousePos_ptr = IL2CPP::Resolver::FindMethod("UnityEngine", "UnityEngine", "Input", "get_mousePosition", 0);
+        void* mouseBtn_ptr = IL2CPP::Resolver::FindMethod("UnityEngine", "UnityEngine", "Input", "GetMouseButton", 1);
+
+        if (mousePos_ptr)
+            get_mousePosition = (t_get_mousePosition)(*(void**)mousePos_ptr);
+
+        if (mouseBtn_ptr)
+            get_mouseButton = (t_GetMouseButton)(*(void**)mouseBtn_ptr);
+    }
+
+    if (screenKlass) 
+    {
+        void* screenWidth_ptr = IL2CPP::Resolver::FindMethod("Assembly-CSharp", "Terraria", "Main", "get_screenWidth", 0);
+        void* screenHeight_ptr = IL2CPP::Resolver::FindMethod("Assembly-CSharp", "Terraria", "Main", "get_screenHeight", 0);
+
+        if (screenWidth_ptr)
+            get_screenWidth = (t_get_ScreenValue)(*(void**)screenWidth_ptr);
+
+        if (screenHeight_ptr)
+            get_screenHeight = (t_get_ScreenValue)(*(void**)screenHeight_ptr);
+    }
+
+    LOGI("Unity Input Resolved: %p, %p", get_mousePosition, get_mouseButton);
+    LOGI("Unity Screen Resolver: %p, %p", get_screenWidth, get_screenHeight);
+}
+
 void my_Update(void* gameTime)
 {
     orig_Main_Update(gameTime);
+
+    if (floatBtn && get_mousePosition && get_mouseButton)
+    {
+        static bool lastState = false;
+        bool currentState = get_mouseButton(0);
+
+        Vector3 mousePos = get_mousePosition();
+
+        int screenH = get_screenHeight ? get_screenHeight() : 1080;
+        int rawX = (int)mousePos.x;
+        int rawY = screenH - (int)mousePos.y;
+
+        int action = -1;
+
+        if (currentState && !lastState) 
+        {
+            action = 0;
+        } 
+        else if (currentState && lastState) 
+        {
+            action = 2; 
+        } 
+        else if (!currentState && lastState) 
+        {
+            action = 1; 
+        }
+
+        if (action != -1) 
+        {
+            floatBtn->OnTouch(action, rawX, rawY);
+        }
+
+        lastState = currentState;
+    }
+    else
+    {
+        return;
+    }
 
     if (menu)
         menu->UpdateButtons();
@@ -109,13 +193,6 @@ void InitAllMods()
 typedef int (*il2cpp_init_fn)(const char* domain_name);
 il2cpp_init_fn original_il2cpp_init = NULL;
 
-// extern "C" __attribute__((visibility("default"))) jint JNI_OnLoad(JavaVM* vm, void* reserved) 
-// {
-//     g_vm = vm;
-//     LOGI("\tJNI_OnLoad called. JavaVM saved at %p", g_vm);
-//     return JNI_VERSION_1_6;
-// }
-
 int my_il2cpp_init(const char* domain_name) 
 {
     int result = ((il2cpp_init_fn)original_il2cpp_init)(domain_name);
@@ -128,6 +205,9 @@ int my_il2cpp_init(const char* domain_name)
 
     SDK::Init(il2cpp_lib);
     InitAllMods();
+    InitUnityInput();
+
+    LOGI("Init Unity input/screen");
 
     typedef jint (*GetCreatedVMs_t)(JavaVM**, jsize, jsize*);
     GetCreatedVMs_t fnGetCreatedVMs = (GetCreatedVMs_t)dlsym(RTLD_DEFAULT, "JNI_GetCreatedJavaVMs");
@@ -185,6 +265,10 @@ int my_il2cpp_init(const char* domain_name)
 
                 menu = std::make_unique<NativeMenu>(env, currentActivity);
 
+                LOGI("Trying float button");
+                floatBtn = std::make_unique<FloatButton>(env, currentActivity, [](){ LOGI("Alright, this shit is working"); menu->Show(); });
+                LOGI("Created float button");
+
                 menu->AddButton("Ghost Mode", []() { SetGhostPlayer(); });
                 menu->AddInputButton("Type Item ID", "Spawn", [](std::string str) 
                 { 
@@ -200,9 +284,9 @@ int my_il2cpp_init(const char* domain_name)
                         SDK::Chat("Invalid item ID! Example: 4956", {255, 0, 0});
                     }
                 });
-                menu->AddButton("BS", []() { SDK::Chat("BS", {255, 0, 0}); });
+                menu->AddButton("Close Menu", []() { menu->Hide(); });
                 
-                menu->Show();
+                menu->Hide();
 
                 LOGI("Native menu has been initilized!");
             } 

@@ -15,6 +15,13 @@ struct Vector2
     float y;
 };
 
+struct Vector3
+{
+    float x;
+    float y;
+    float z;
+};
+
 namespace SDK
 {
     inline void (*NewText)(void* text, uint8_t r, uint8_t g, uint8_t b);

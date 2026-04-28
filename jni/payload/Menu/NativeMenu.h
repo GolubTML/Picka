@@ -64,6 +64,8 @@ private:
     
     JavaClasses jc; // more bad ideas
 
+    // TODO: Store java methods here
+
     jobject createButton(const std::string& str);
     void applyStyle(jobject view);
 

@@ -25,14 +25,14 @@ NativeMenu::NativeMenu(JNIEnv* jEnv, jobject context) : env(jEnv)
     jmethodID lpInit = env->GetMethodID(jc.windowManagerLP, "<init>", "(IIIII)V");
     layoutParametrs = env->NewGlobalRef(env->NewObject(
         jc.windowManagerLP , lpInit,
-        400, -2,
+        800, -2,
         2,
         8,
         -3
     ));
 
     jfieldID gravityField = env->GetFieldID(jc.windowManagerLP , "gravity", "I");
-    env->SetIntField(layoutParametrs, gravityField, 0x33);
+    env->SetIntField(layoutParametrs, gravityField, 0x11 /*CENTER*/);
     
     jmethodID getWM = env->GetMethodID(env->FindClass("android/content/Context"), "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
     windowManager = env->NewGlobalRef(env->CallObjectMethod(context, getWM, env->NewStringUTF("window")));
