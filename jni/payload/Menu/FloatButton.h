@@ -35,5 +35,9 @@ public:
     FloatButton(JNIEnv* _env, jobject currActivity, std::function<void()> _onClick);
     ~FloatButton();
 
+    jobject GetView() { return mButton; }
+    jobject GetWindowManager() { return mWindowManager; }
+    jobject GetLayoutParams() { return mParams; }
+
     void OnTouch(int action, int rawX, int rawY);
 };

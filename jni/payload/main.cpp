@@ -8,6 +8,7 @@
 #include "SDK/hook.h"
 #include "Menu/NativeMenu.h"
 #include "Menu/FloatButton.h"
+#include "Menu/ModMenu.h"
 #include "log.h"
 #include "crash.h"
 #include "SDK/SDK.h"
@@ -20,161 +21,39 @@
 #include <dlfcn.h>
 
 JavaVM* g_vm = nullptr;
-std::unique_ptr<NativeMenu> menu;
-std::unique_ptr<FloatButton> floatBtn;
 
-typedef void (*t_Main_Update)(void* gameTime);
-t_Main_Update orig_Main_Update;
-
-typedef Vector3 (*t_get_mousePosition)();
-typedef bool (*t_GetMouseButton)(int);
-typedef int (*t_get_ScreenValue)();
-
-t_get_mousePosition get_mousePosition = nullptr;
-t_GetMouseButton get_mouseButton = nullptr;
-t_get_ScreenValue get_screenWidth = nullptr;
-t_get_ScreenValue get_screenHeight = nullptr;
-
-// I will fix all of this shit, i promise
-
-void InitUnityInput()
+extern "C" 
 {
-    void* inputKlass = IL2CPP::Resolver::FindClass("UnityEngine", "UnityEngine", "Input");
-    void* screenKlass = IL2CPP::Resolver::FindClass("UnityEngine", "UnityEngine", "Screen"); // TODO: make IL2CPP::Resolver::FindMethod with class it self, not with assemblies, namezpace, klass.. 
-
-    if (inputKlass) 
+    JNIEXPORT void JNICALL __attribute__((visibility("default")))
+    Java_com_picka_tools_FloatButtonHelper_onClickNative(JNIEnv* env, jclass clazz) 
     {
-        void* mousePos_ptr = IL2CPP::Resolver::FindMethod("UnityEngine", "UnityEngine", "Input", "get_mousePosition", 0);
-        void* mouseBtn_ptr = IL2CPP::Resolver::FindMethod("UnityEngine", "UnityEngine", "Input", "GetMouseButton", 1);
-
-        if (mousePos_ptr)
-            get_mousePosition = (t_get_mousePosition)(*(void**)mousePos_ptr);
-
-        if (mouseBtn_ptr)
-            get_mouseButton = (t_GetMouseButton)(*(void**)mouseBtn_ptr);
+        LOGI("JNI: Click started");
+        if (Menu::instance == nullptr) 
+        {
+            LOGI("ERR: Menu::instance is NULL!");
+            return;
+        }
+        
+        Menu::instance->menu->Show();
     }
-
-    if (screenKlass) 
-    {
-        void* screenWidth_ptr = IL2CPP::Resolver::FindMethod("Assembly-CSharp", "Terraria", "Main", "get_screenWidth", 0);
-        void* screenHeight_ptr = IL2CPP::Resolver::FindMethod("Assembly-CSharp", "Terraria", "Main", "get_screenHeight", 0);
-
-        if (screenWidth_ptr)
-            get_screenWidth = (t_get_ScreenValue)(*(void**)screenWidth_ptr);
-
-        if (screenHeight_ptr)
-            get_screenHeight = (t_get_ScreenValue)(*(void**)screenHeight_ptr);
-    }
-
-    LOGI("Unity Input Resolved: %p, %p", get_mousePosition, get_mouseButton);
-    LOGI("Unity Screen Resolver: %p, %p", get_screenWidth, get_screenHeight);
 }
 
-void my_Update(void* gameTime)
+void RegisterNativeMethods(JNIEnv* env) 
 {
-    orig_Main_Update(gameTime);
-
-    if (floatBtn && get_mousePosition && get_mouseButton)
-    {
-        static bool lastState = false;
-        bool currentState = get_mouseButton(0);
-
-        Vector3 mousePos = get_mousePosition();
-
-        int screenH = get_screenHeight ? get_screenHeight() : 1080;
-        int rawX = (int)mousePos.x;
-        int rawY = screenH - (int)mousePos.y;
-
-        int action = -1;
-
-        if (currentState && !lastState) 
-        {
-            action = 0;
-        } 
-        else if (currentState && lastState) 
-        {
-            action = 2; 
-        } 
-        else if (!currentState && lastState) 
-        {
-            action = 1; 
-        }
-
-        if (action != -1) 
-        {
-            floatBtn->OnTouch(action, rawX, rawY);
-        }
-
-        lastState = currentState;
-    }
-    else
-    {
+    jclass clazz = env->FindClass("com/picka/tools/FloatButtonHelper");
+    if (!clazz) {
+        LOGI("Native: Could not find FloatButtonHelper class for registration");
         return;
     }
 
-    if (menu)
-        menu->UpdateButtons();
-}
+    JNINativeMethod methods[] = {
+        {(char*)"onClickNative", (char*)"()V", (void*)Java_com_picka_tools_FloatButtonHelper_onClickNative}
+    };
 
-typedef int (*t_NewItem)(int, int, int, int, int, int, bool, int, bool, void*);
-
-void* GetLocalPlayer2()
-{
-    static void* main_klass = IL2CPP::Resolver::FindClass("Assembly-CSharp", "Terraria", "Main");
-    if (!main_klass) return nullptr;
-
-    static void* myPlayer_field = IL2CPP::Resolver::FindField(main_klass, "myPlayer");
-    static void* player_field = IL2CPP::Resolver::FindStaticField(main_klass, "player");
-
-    LOGI("Fields: %p, %p", myPlayer_field, player_field);
-    void* static_data = IL2CPP::get_static_field_data(main_klass);
-    
-    int myPlayerIdx = *(int*)((uintptr_t)static_data + 0x424); // wtf, why i can't allocate myPlayer field? but it static in the class..
-
-    void* playerArray = nullptr;
-    IL2CPP::field_static_get_value(player_field, &playerArray);
-
-    if (!playerArray || myPlayerIdx < 0) return nullptr;
-
-    void** items = (void**)((uintptr_t)playerArray + 0x20); 
-    return items[myPlayerIdx];
-}
-
-void SpawItem(int itemID)
-{
-    void* player = GetLocalPlayer2();
-    if (!player) return;
-
-    static void* method_ptr = IL2CPP::Resolver::FindMethod("Assembly-CSharp", "Terraria", "Item", "NewItem", 9);
-    if (!method_ptr) return;
-
-    auto NewItem = (t_NewItem)(*(void**)method_ptr);
-
-    static void* posField = IL2CPP::Resolver::FindField(*(void**)player, "position");
-    Vector2 pos = IL2CPP::Resolver::GetFieldValue<Vector2>(player, posField);
-
-    NewItem((int)pos.x, (int)pos.y, 0, 0, itemID, 1, false, 0, false, nullptr);
-}
-
-void SetGhostPlayer()
-{
-    void* player = GetLocalPlayer2();
-    if (!player) return;
-
-    static void* ghostField = IL2CPP::Resolver::FindField(*(void**)player, "ghost");
-
-    if (ghostField)
-    {
-        bool currentState = IL2CPP::Resolver::GetFieldValue<bool>(player, ghostField);
-
-        bool newState = !currentState;
-
-        IL2CPP::Resolver::SetFieldValue<bool>(player, ghostField, newState);
-
-        if (newState) 
-            SDK::Chat("Ghost Mode: [ON]", {0, 255, 0});
-        else 
-            SDK::Chat("Ghost Mode: [OFF]", {255, 0, 0});
+    if (env->RegisterNatives(clazz, methods, 1) < 0) {
+        LOGI("Native: RegisterNatives failed!");
+    } else {
+        LOGI("Native: RegisterNatives SUCCESS!");
     }
 }
 
@@ -182,7 +61,7 @@ void InitAllMods()
 {
     std::vector<HookTarget> hooks = 
     {
-        { "Assembly-CSharp", "Terraria", "Main", "Update", 1, (void*)my_Update, (void**)&orig_Main_Update },
+        { "Assembly-CSharp", "Terraria", "Main", "Update", 1, (void*)Menu::my_Update, (void**)&Menu::orig_Main_Update },
         { "Assembly-CSharp", "Terraria", "Player", "Hurt", -1, (void*)my_Player_Hurt, (void**)&original_Player_Hurt },
         { "Assembly-CSharp", "Terraria.Chat", "ChatCommandProcessor", "ProcessIncomingMessage", -1, (void*)my_ProcessIncomingMessage, (void**)&orig_ProcessIncomingMessage },
     };
@@ -205,7 +84,7 @@ int my_il2cpp_init(const char* domain_name)
 
     SDK::Init(il2cpp_lib);
     InitAllMods();
-    InitUnityInput();
+    Menu::InitUnityInput();
 
     LOGI("Init Unity input/screen");
 
@@ -263,30 +142,8 @@ int my_il2cpp_init(const char* domain_name)
             {
                 LOGI("Found currentActivity, creating button...");
 
-                menu = std::make_unique<NativeMenu>(env, currentActivity);
-
-                LOGI("Trying float button");
-                floatBtn = std::make_unique<FloatButton>(env, currentActivity, [](){ LOGI("Alright, this shit is working"); menu->Show(); });
-                LOGI("Created float button");
-
-                menu->AddButton("Ghost Mode", []() { SetGhostPlayer(); });
-                menu->AddInputButton("Type Item ID", "Spawn", [](std::string str) 
-                { 
-                    try
-                    {
-                        int itemID = std::stoi(str);
-                        SpawItem(itemID);
-                        
-                        SDK::Chat("Spawned item from menu!", {0, 255, 0});
-                    }   
-                    catch (...)
-                    {
-                        SDK::Chat("Invalid item ID! Example: 4956", {255, 0, 0});
-                    }
-                });
-                menu->AddButton("Close Menu", []() { menu->Hide(); });
-                
-                menu->Hide();
+                RegisterNativeMethods(env);
+                Menu::instance = std::make_unique<Menu::ModMenu>(env, currentActivity);
 
                 LOGI("Native menu has been initilized!");
             } 

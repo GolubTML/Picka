@@ -28,4 +28,6 @@ namespace SDK
 
     void Init(uintptr_t base);
     void Chat(const char* message, Color color);
+
+    void* GetLocalPlayer();
 };

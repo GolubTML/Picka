@@ -16,7 +16,7 @@ FloatButton::FloatButton(JNIEnv* _env,jobject currActivity, std::function<void()
 
     jmethodID btnInit = env->GetMethodID(btnClass, "<init>", "(Landroid/content/Context;)V");
     LOGI("local button created?");
-    jobject localBtn = env->NewObject(btnClass, btnInit, currActivity); // crash. Why it's currently here?
+    jobject localBtn = env->NewObject(btnClass, btnInit, currActivity);
 
     if (!localBtn) 
     {
@@ -39,9 +39,9 @@ FloatButton::FloatButton(JNIEnv* _env,jobject currActivity, std::function<void()
     jmethodID lpInit = env->GetMethodID(lpClass, "<init>", "(IIIII)V");
 
     mParams = env->NewGlobalRef(env->NewObject(lpClass, lpInit,
-        50, 50,                      
+        150, 150,                      
         2,                              
-        8 | 16 | 512,                           
+        8 | 32 | 512,                           
         -3                        
     ));
 
@@ -73,6 +73,28 @@ FloatButton::FloatButton(JNIEnv* _env,jobject currActivity, std::function<void()
     );
     
     LOGI("Everything is done!");
+
+    jclass helperClass = env->FindClass("com/picka/tools/FloatButtonHelper");
+
+    if (helperClass) 
+    {
+        jmethodID initMethod = env->GetStaticMethodID(helperClass, "initTouchListener", 
+            "(Landroid/view/View;Landroid/view/WindowManager;Landroid/view/WindowManager$LayoutParams;)V");
+        
+        if (initMethod) 
+        {
+            env->CallStaticVoidMethod(helperClass, initMethod, mButton, mWindowManager, mParams);
+            LOGI("Java Touch Listener linked successfully!");
+        } 
+        else 
+        {
+            LOGI("Failed to find initTouchListener method!");
+        }
+    } 
+    else 
+    {
+        LOGI("Failed to find FloatButtonHelper class! Check your classes2.dex");
+    }
 }
 
 FloatButton::~FloatButton()
