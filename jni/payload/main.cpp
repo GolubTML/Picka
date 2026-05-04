@@ -14,6 +14,7 @@
 #include "SDK/SDK.h"
 #include "SDK/Il2Cpp/Il2CppAPI.h"
 #include "SDK/Il2Cpp/Il2CppResolver.h"
+#include "SDK/LuaAPI/LuaBridge.h"
 
 
 #include "test_mods/no_damage.h"
@@ -178,21 +179,23 @@ int my_il2cpp_init(const char* domain_name)
         luaL_openlibs(L);
         LOGI("LUA_DEBUG: State created and libs opened");
         
-        LOGI("LUA_DEBUG: Testing lua_pushnumber...");
-        lua_pushnumber(L, 42);
-        
-        lua_pushcfunction(L, test_c_func);
+        LuaBridge::RegisterAPI(L);
 
-        if (lua_pcall(L, 0, 0, 0)) 
+        const char* path = "/data/local/tmp/log_test.lua";
+        int status = luaL_loadfile(L, path);
+
+        if (status == LUA_OK) 
         {
-            LOGI("LUA_DEBUG: Error: %s", lua_tostring(L, -1));
+            if (lua_pcall(L, 0, 0, 0) != LUA_OK) 
+            {
+                LOGI("LUA EXEC ERROR: %s", lua_tostring(L, -1));
+            }
         } 
-        else 
-        {
-            LOGI("LUA_DEBUG: Lua 5.4 call SUCCESS!");
+        else
+         {
+            LOGI("LUA LOAD ERROR: %s", lua_tostring(L, -1));
+            LOGI("Check if file exists at: %s", path);
         }
-
-        lua_close(L);
     }
     
     return result;
