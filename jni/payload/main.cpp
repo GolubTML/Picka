@@ -20,6 +20,8 @@
 #include "test_mods/chat_menu.h"
 #include <dlfcn.h>
 
+#include "libs/Lua54/lua.hpp"
+
 JavaVM* g_vm = nullptr;
 
 extern "C" 
@@ -67,6 +69,12 @@ void InitAllMods()
     };
     
     InstallDynamicHooks(hooks);
+}
+
+static int test_c_func(lua_State *L) 
+{
+    LOGI("LUA_DEBUG: HELLO FROM C FUNC!");
+    return 0;
 }
 
 typedef int (*il2cpp_init_fn)(const char* domain_name);
@@ -160,6 +168,31 @@ int my_il2cpp_init(const char* domain_name)
     else 
     {
         LOGI("Failed to get JNIEnv from JavaVM");
+    }
+
+    LOGI("Lua 5.4: Attempting to create state...");
+    lua_State *L = luaL_newstate();
+
+    if (L) 
+    {
+        luaL_openlibs(L);
+        LOGI("LUA_DEBUG: State created and libs opened");
+        
+        LOGI("LUA_DEBUG: Testing lua_pushnumber...");
+        lua_pushnumber(L, 42);
+        
+        lua_pushcfunction(L, test_c_func);
+
+        if (lua_pcall(L, 0, 0, 0)) 
+        {
+            LOGI("LUA_DEBUG: Error: %s", lua_tostring(L, -1));
+        } 
+        else 
+        {
+            LOGI("LUA_DEBUG: Lua 5.4 call SUCCESS!");
+        }
+
+        lua_close(L);
     }
     
     return result;

@@ -4,19 +4,27 @@ NDK=/opt/android-ndk
 CLANG=$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang
 CLANGPP=$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++
 
-$CLANGPP -shared -fPIC -O2 -DIMGUI_IMPL_OPENGL_ES3 \
+
+LUA_DIR="./jni/payload/libs/Lua54"
+LUA_SRCS="$LUA_DIR/*.c"
+CPP_SRCS=$(find jni/payload -name "*.cpp")
+
+$CLANGPP -shared -fPIC -O2 \
     -o payload.so \
-    jni/payload/*.cpp \
-    jni/payload/test_mods/*.cpp \
-    jni/payload/SDK/*.cpp \
-    jni/payload/SDK/Il2Cpp/*.cpp \
-    jni/payload/Menu/*.cpp \
+    -x c $LUA_SRCS \
+    -x c++ $CPP_SRCS \
     -I. \
+    -I$LUA_DIR \
     -Ijni/payload \
     -Ijni/payload/test_mods \
-    -llog \
-    -lEGL \
-    -lGLESv3 \
-    -static-libstdc++
+    -llog -landroid -ldl \
+    -static-libstdc++ \
+    -Wl,--export-dynamic \
+    -Wl,--no-undefined
 
-echo "Done: payload.so"
+if [ $? -eq 0 ]; then
+    echo "Done: payload.so"
+else
+    echo "Compilation FAILED!"
+    exit 1
+fi
