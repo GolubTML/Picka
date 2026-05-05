@@ -52,7 +52,7 @@ namespace Menu
         NewItem((int)pos.x, (int)pos.y, 0, 0, itemID, 1, false, 0, false, nullptr);
     }
 
-    ModMenu::ModMenu(JNIEnv* _env, jobject activity)
+    ModMenu::ModMenu(JNIEnv* _env, jobject activity, lua_State *L)
     {
         menu = std::make_unique<NativeMenu>(_env, activity);
         floatBtn = std::make_unique<FloatButton>(_env, activity, [this](){  });
@@ -72,8 +72,30 @@ namespace Menu
                 SDK::Chat("Invalid item ID! Example: 4956", {255, 0, 0});
             }
         });
+        
+        menu->AddButton("Do test mod", [L]()
+        {
+            if (L) 
+            {
+                const char* path = "/data/local/tmp/nativeCall_test.lua";
+                int status = luaL_loadfile(L, path);
+                
+                if (status == LUA_OK) 
+                {
+                    if (lua_pcall(L, 0, 0, 0) != LUA_OK) 
+                    {
+                        LOGI("LUA EXEC ERROR: %s", lua_tostring(L, -1));
+                    }
+                } 
+                else
+                {
+                    LOGI("LUA LOAD ERROR: %s", lua_tostring(L, -1));
+                    LOGI("Check if file exists at: %s", path);
+                }
+            }
+        });
+        
         menu->AddButton("Close Menu", [this]() { this->menu->Hide(); });
-
         menu->Hide();
     }
 

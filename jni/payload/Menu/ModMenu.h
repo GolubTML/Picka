@@ -4,6 +4,7 @@
 #include "FloatButton.h"
 #include "../SDK/SDK.h"
 #include <memory>
+#include "libs/Lua54/lua.hpp"
 
 namespace Menu
 {
@@ -19,7 +20,7 @@ namespace Menu
         std::unique_ptr<NativeMenu> menu;
         std::unique_ptr<FloatButton> floatBtn;
 
-        ModMenu(JNIEnv* _env, jobject activity);
+        ModMenu(JNIEnv* _env, jobject activity, lua_State *L);
 
         void OnUpdate();
     };

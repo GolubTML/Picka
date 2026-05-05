@@ -24,6 +24,7 @@
 #include "libs/Lua54/lua.hpp"
 
 JavaVM* g_vm = nullptr;
+lua_State *L;
 
 extern "C" 
 {
@@ -136,6 +137,33 @@ int my_il2cpp_init(const char* domain_name)
         LOGI("Could not find JNI_GetCreatedJavaVMs symbol!");
     }
 
+    LOGI("Lua 5.4: Attempting to create state...");
+    L = luaL_newstate();
+
+    if (L)
+    {
+        luaL_openlibs(L);
+        LOGI("LUA_DEBUG: State created and libs opened");
+            
+        LuaBridge::RegisterAPI(L);
+
+        const char* path = "/data/local/tmp/hook_test.lua";
+        int status = luaL_loadfile(L, path);
+
+        if (status == LUA_OK) 
+        {
+            if (lua_pcall(L, 0, 0, 0) != LUA_OK) 
+            {
+                LOGI("LUA EXEC ERROR: %s", lua_tostring(L, -1));
+            }
+        } 
+        else
+        {
+            LOGI("LUA LOAD ERROR: %s", lua_tostring(L, -1));
+            LOGI("Check if file exists at: %s", path);
+        }
+    }
+
     JNIEnv* env = nullptr;
 
     if (g_vm->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_OK)
@@ -152,7 +180,7 @@ int my_il2cpp_init(const char* domain_name)
                 LOGI("Found currentActivity, creating button...");
 
                 RegisterNativeMethods(env);
-                Menu::instance = std::make_unique<Menu::ModMenu>(env, currentActivity);
+                Menu::instance = std::make_unique<Menu::ModMenu>(env, currentActivity, L);
 
                 LOGI("Native menu has been initilized!");
             } 
@@ -169,33 +197,6 @@ int my_il2cpp_init(const char* domain_name)
     else 
     {
         LOGI("Failed to get JNIEnv from JavaVM");
-    }
-
-    LOGI("Lua 5.4: Attempting to create state...");
-    lua_State *L = luaL_newstate();
-
-    if (L) 
-    {
-        luaL_openlibs(L);
-        LOGI("LUA_DEBUG: State created and libs opened");
-        
-        LuaBridge::RegisterAPI(L);
-
-        const char* path = "/data/local/tmp/method_test.lua";
-        int status = luaL_loadfile(L, path);
-
-        if (status == LUA_OK) 
-        {
-            if (lua_pcall(L, 0, 0, 0) != LUA_OK) 
-            {
-                LOGI("LUA EXEC ERROR: %s", lua_tostring(L, -1));
-            }
-        } 
-        else
-         {
-            LOGI("LUA LOAD ERROR: %s", lua_tostring(L, -1));
-            LOGI("Check if file exists at: %s", path);
-        }
     }
     
     return result;
