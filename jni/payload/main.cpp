@@ -66,7 +66,7 @@ void InitAllMods()
     std::vector<HookTarget> hooks = 
     {
         { "Assembly-CSharp", "Terraria", "Main", "Update", 1, (void*)Menu::my_Update, (void**)&Menu::orig_Main_Update },
-        { "Assembly-CSharp", "Terraria", "Player", "Hurt", -1, (void*)my_Player_Hurt, (void**)&original_Player_Hurt },
+       // { "Assembly-CSharp", "Terraria", "Player", "Hurt", -1, (void*)my_Player_Hurt, (void**)&original_Player_Hurt },
         { "Assembly-CSharp", "Terraria.Chat", "ChatCommandProcessor", "ProcessIncomingMessage", -1, (void*)my_ProcessIncomingMessage, (void**)&orig_ProcessIncomingMessage },
     };
     
@@ -147,7 +147,7 @@ int my_il2cpp_init(const char* domain_name)
             
         LuaBridge::RegisterAPI(L);
 
-        const char* path = "/data/local/tmp/hook_test.lua";
+        const char* path = "/data/local/tmp/nodamage.lua";
         int status = luaL_loadfile(L, path);
 
         if (status == LUA_OK) 

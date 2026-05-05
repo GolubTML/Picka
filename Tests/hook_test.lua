@@ -12,7 +12,7 @@ if init then
     picka.hook(init, 0, function (original, instance)
         picka.log("U see me?")
 
-        picka.callNative(original, instance)
+        picka.callNative(original, instance) -- it's like calling 'original', but with picka
 
         picka.log("Hello from Hook (in Lua!)")
     end)
