@@ -100,6 +100,12 @@ namespace IL2CPP
         return nullptr;
     }
 
+    uintptr_t Resolver::GetMethodPtr(void* methodInfo)
+    {
+        if (!methodInfo) return 0;
+        return (uintptr_t)((MethodInfo*)methodInfo)->methodPointer;
+    }
+
     size_t Resolver::GetFieldOffset(void* klass, const char* fieldName)
     {
         void* currentKlass = klass;
