@@ -31,8 +31,18 @@ if pHurt then
 
         -- for immortality, we need to call default functions, but with damage = 0
 
-        picka.callNative(original, instance, damageSource, 0, hitDir, pvp, quiet, crit, cooldown, dodgeable)
+        -- test
+        local statLife = picka.getField(instance, "statLife")
+        if statLife then
+            picka.log("Find statLife! " .. tostring(statLife))
+        else
+            picka.log("Field statLife not found!")
+        end
 
+        picka.setField(instance, "statLife", statLife)
+        picka.log("All hp restored!")
+
+        return picka.callNative(original, instance, damageSource, 0, hitDir, pvp, quiet, crit, cooldown, dodgeable)
     end)
 
 else

@@ -2,6 +2,7 @@
 #include "../Il2Cpp/Il2CppAPI.h"
 #include "../Il2Cpp/Il2CppResolver.h"
 #include "../hook.h"
+#include "log.h"
 #include <android/log.h>
 #include <string>
 
@@ -75,6 +76,175 @@ namespace LuaBridge
         }
 
         return 1;
+    }
+
+    int lua_getClass(lua_State* L)
+    {
+        const char* assembly = luaL_checkstring(L, 1);
+        const char* namezpace = luaL_checkstring(L, 2);
+        const char* klassName = luaL_checkstring(L, 3);
+
+        void* klass = IL2CPP::Resolver::FindClass(assembly, namezpace, klassName);
+
+        if (klass)
+        {
+            lua_pushlightuserdata(L, klass);
+        }
+        else
+        {
+            lua_pushnil(L);
+        }
+
+        return 1;
+    }
+
+    int lua_getFieldStatic(lua_State* L)
+    {
+        void* klass = nullptr;
+        const char* fieldName = nullptr;
+
+        if (lua_islightuserdata(L, 1))
+        {
+            klass = lua_touserdata(L, 1);
+            fieldName = luaL_checkstring(L, 2);
+        }
+        else
+        {
+            luaL_error(L, "Use picka.getFieldStatic(klass, fieldName)!");
+        }
+
+        if (!klass) return 0;
+
+        void* fieldInfo = IL2CPP::class_get_field_from_name(klass, fieldName);
+        if (!fieldInfo)
+        {
+            LOGI("Field not found! %s", fieldName);
+            lua_pushnil(L);
+            return 1;
+        }
+
+        uintptr_t value = 0;
+        IL2CPP::field_static_get_value(fieldInfo, &value);
+
+        // For test
+        if (value > 0xFFFFFFFF)
+            lua_pushlightuserdata(L, (void*)value);
+        else
+            lua_pushinteger(L, value);
+
+        return 1;
+    }
+
+    int lua_setStaticField(lua_State* L)
+    {
+        if (!lua_islightuserdata(L, 1)) return luaL_error(L, "Arg 1 must be class pointer");
+        void* klass = lua_touserdata(L, 1);
+        const char* fieldName = luaL_checkstring(L, 2);
+
+        void* fieldInfo = IL2CPP::class_get_field_from_name(klass, fieldName);
+        if (!fieldInfo) return luaL_error(L, "Field not found!");
+
+        uintptr_t value = 0;
+
+        if (lua_isinteger(L, 3))
+        {
+            value = (uintptr_t)lua_tointeger(L, 3);
+        }
+        else if (lua_isboolean(L, 3))
+        {
+            value = (uintptr_t)lua_toboolean(L, 3);
+        }
+        else if (lua_islightuserdata(L, 3))
+        {
+            value = (uintptr_t)lua_touserdata(L, 3);
+        }
+        else if (lua_isnumber(L, 3))
+        {
+            value = (uintptr_t)lua_tonumber(L, 3);
+        }
+
+        IL2CPP::field_static_set_value(fieldInfo, &value);
+
+        return 0;
+    }
+
+    int lua_getField(lua_State* L)
+    {
+        void* instance = lua_touserdata(L, 1);
+        const char* fieldName = luaL_checkstring(L, 2);
+
+        if (!instance) return 0;
+
+        void* klass = IL2CPP::object_get_class(instance);
+        void* fieldInfo = IL2CPP::class_get_field_from_name(klass, fieldName);
+
+        if (!fieldInfo)
+        {
+            LOGI("--- FIELD NOT FOUND: %s ---", fieldName);
+            LOGI("Listing all fields for class...");
+
+            void* iter = nullptr;
+            void* field;
+            while ((field = IL2CPP::class_get_fields(klass, &iter))) 
+            {
+                const char* name = IL2CPP::field_get_name(field);
+                LOGI("Available field: %s", name);
+            }
+            
+            lua_pushnil(L);
+            return 1;
+        }
+
+        uintptr_t value = 0;
+        IL2CPP::field_get_value(instance, fieldInfo, &value);
+
+        if (value > 0xFFFFFFFF)
+            lua_pushlightuserdata(L, (void*)value);
+        else
+            lua_pushinteger(L, value);
+
+        return 1;
+    }
+
+    int lua_setField(lua_State* L)
+    {
+        void* instance = lua_touserdata(L, 1);
+        const char* fieldName = luaL_checkstring(L, 2);
+
+        if (!instance) return 0;
+
+        void* klass = IL2CPP::object_get_class(instance);
+        void* fieldInfo = IL2CPP::class_get_field_from_name(klass, fieldName);
+
+        if (!fieldInfo)
+        {
+            LOGI("Cannot find field! %s", fieldName);
+            lua_pushnil(L);
+            return 1;
+        }
+
+        uintptr_t value = 0;
+
+        if (lua_isinteger(L, 3))
+        {
+            value = (uintptr_t)lua_tointeger(L, 3);
+        }
+        else if (lua_isboolean(L, 3))
+        {
+            value = (uintptr_t)lua_toboolean(L, 3);
+        }
+        else if (lua_islightuserdata(L, 3))
+        {
+            value = (uintptr_t)lua_touserdata(L, 3);
+        }
+        else if (lua_isnumber(L, 3))
+        {
+            value = (uintptr_t)lua_tonumber(L, 3);
+        }
+
+        IL2CPP::field_set_value(instance, fieldInfo, &value);
+
+        return 0;
     }
 
     int lua_callNative(lua_State* L)
@@ -165,6 +335,16 @@ namespace LuaBridge
 
         lua_pushcfunction(L, lua_getMethodAddr);
         lua_setfield(L, -2, "getMethodAddr");
+        lua_pushcfunction(L, lua_getClass);
+        lua_setfield(L, -2, "getClass");
+        lua_pushcfunction(L, lua_getFieldStatic);
+        lua_setfield(L, -2, "getFieldStatic");
+        lua_pushcfunction(L, lua_setStaticField);
+        lua_setfield(L, -2, "setFieldStatic");
+        lua_pushcfunction(L, lua_getField);
+        lua_setfield(L, -2, "getField");
+        lua_pushcfunction(L, lua_setField);
+        lua_setfield(L, -2, "setField");
 
         lua_pushcfunction(L, lua_callNative);
         lua_setfield(L, -2, "callNative");

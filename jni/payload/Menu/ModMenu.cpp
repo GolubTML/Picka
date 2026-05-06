@@ -77,7 +77,7 @@ namespace Menu
         {
             if (L) 
             {
-                const char* path = "/data/local/tmp/nativeCall_test.lua";
+                const char* path = "/data/local/tmp/getClass_test.lua";
                 int status = luaL_loadfile(L, path);
                 
                 if (status == LUA_OK) 
