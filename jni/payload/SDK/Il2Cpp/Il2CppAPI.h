@@ -31,6 +31,10 @@ namespace IL2CPP
     REGISTER_IL2CPP_METHOD(void*, new_string, (const char* str));
     REGISTER_IL2CPP_METHOD(char*, string_to_utf8, (void* str));
 
+    // Array
+    REGISTER_IL2CPP_METHOD(uint32_t, array_length, (void* array));
+    REGISTER_IL2CPP_METHOD(uint32_t, array_object_header_size, ());
+
     #undef REGISTER_IL2CPP_METHOD
 
     void InitIl2CppAPI();

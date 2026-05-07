@@ -77,7 +77,7 @@ namespace Menu
         {
             if (L) 
             {
-                const char* path = "/data/local/tmp/wrapper_static.lua";
+                const char* path = "/data/local/tmp/scanNPCs.lua";
                 int status = luaL_loadfile(L, path);
                 
                 if (status == LUA_OK) 

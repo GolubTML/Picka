@@ -23,6 +23,9 @@ namespace LuaBridge
     static int lua_getField(lua_State* L);
     static int lua_setField(lua_State* L);
 
+    static int lua_getArrayLength(lua_State* L);
+    static int lua_getArrayElement(lua_State* L);
+
     static int lua_callNative(lua_State* L);
     static int lua_hook(lua_State* L);
 

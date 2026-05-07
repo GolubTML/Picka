@@ -27,6 +27,9 @@ namespace IL2CPP
     t_new_string new_string = NULL;
     t_string_to_utf8 string_to_utf8 = NULL;
 
+    t_array_length array_length = NULL;
+    t_array_object_header_size array_object_header_size = NULL;
+
     void InitIl2CppAPI()
     {
         void* handle = dlopen("libil2cpp.so", RTLD_NOW);
@@ -68,5 +71,8 @@ namespace IL2CPP
         {
             LOGI("Success: il2cpp_string_to_utf8 found at %p", (void*)string_to_utf8);
         }
+
+        array_length = (t_array_length)dlsym(handle, "il2cpp_array_length");
+        array_object_header_size = (t_array_object_header_size)dlsym(handle, "il2cpp_array_object_header_size");
     }
 }
