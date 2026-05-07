@@ -57,24 +57,38 @@ namespace LuaBridge
 
     int lua_getMethodAddr(lua_State* L)
     {
-        const char* assembly = luaL_checkstring(L, 1);
-        const char* namezpace = luaL_checkstring(L, 2);
-        const char* klass = luaL_checkstring(L, 3);
-        const char* method = luaL_checkstring(L, 4);
-        int args = luaL_checkinteger(L, 5);
+        void* methodInfo = nullptr;
 
-        void* methodInfo = IL2CPP::Resolver::FindMethod(assembly, namezpace, klass, method, args);
-        uintptr_t addr = IL2CPP::Resolver::GetMethodPtr(methodInfo);
-
-        if (addr)
+        if (lua_islightuserdata(L, 1))
         {
+            // if we want write picka.getMethodPtr(klass, methodName, argsCount)
+            void* klass = lua_touserdata(L, 1);
+            const char* methodName = luaL_checkstring(L, 2);
+            int args = luaL_checkinteger(L, 3);
+
+            methodInfo = IL2CPP::class_get_method_from_name(klass, methodName, args);
+        }
+        else
+        {
+            const char* assembly = luaL_checkstring(L, 1);
+            const char* namezpace = luaL_checkstring(L, 2);
+            const char* klass = luaL_checkstring(L, 3);
+            const char* method = luaL_checkstring(L, 4);
+            int args = luaL_checkinteger(L, 5);
+
+            methodInfo = IL2CPP::Resolver::FindMethod(assembly, namezpace, klass, method, args);
+        }
+
+        if (methodInfo)
+        {
+            uintptr_t addr = IL2CPP::Resolver::GetMethodPtr(methodInfo);
             lua_pushinteger(L, addr);
         }
         else
         {
             lua_pushnil(L);
         }
-
+        
         return 1;
     }
 

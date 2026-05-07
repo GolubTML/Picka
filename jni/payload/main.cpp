@@ -147,7 +147,7 @@ int my_il2cpp_init(const char* domain_name)
             
         LuaBridge::RegisterAPI(L);
 
-        const char* path = "/data/local/tmp/fields_test.lua";
+        const char* path = "/data/local/tmp/wrapper_instance.lua";
         int status = luaL_loadfile(L, path);
 
         if (status == LUA_OK) 
