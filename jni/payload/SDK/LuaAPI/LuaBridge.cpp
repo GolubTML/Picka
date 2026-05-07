@@ -98,7 +98,7 @@ namespace LuaBridge
         return 1;
     }
 
-    int lua_getFieldStatic(lua_State* L)
+    int lua_getStaticField(lua_State* L)
     {
         void* klass = nullptr;
         const char* fieldName = nullptr;
@@ -170,10 +170,24 @@ namespace LuaBridge
 
     int lua_getField(lua_State* L)
     {
-        void* instance = lua_touserdata(L, 1);
+        void* instance = nullptr;
+
+        if (lua_islightuserdata(L, 1))
+        {
+            instance = lua_touserdata(L, 1);
+        }
+        else if (lua_isnumber(L, 1))
+        {
+            instance = (void*)(uintptr_t)lua_tointeger(L, 1);
+        }
+
         const char* fieldName = luaL_checkstring(L, 2);
 
-        if (!instance) return 0;
+        if (!instance) 
+        {
+            LOGI("Cannot allocate instance!");
+            return 0;
+        }
 
         void* klass = IL2CPP::object_get_class(instance);
         void* fieldInfo = IL2CPP::class_get_field_from_name(klass, fieldName);
@@ -208,10 +222,24 @@ namespace LuaBridge
 
     int lua_setField(lua_State* L)
     {
-        void* instance = lua_touserdata(L, 1);
+        void* instance = nullptr;
+
+        if (lua_islightuserdata(L, 1))
+        {
+            instance = lua_touserdata(L, 1);
+        }
+        else if (lua_isnumber(L, 1))
+        {
+            instance = (void*)(uintptr_t)lua_tointeger(L, 1);
+        }
+
         const char* fieldName = luaL_checkstring(L, 2);
 
-        if (!instance) return 0;
+        if (!instance) 
+        {
+            LOGI("Cannot allocate instance!");
+            return 0;
+        }
 
         void* klass = IL2CPP::object_get_class(instance);
         void* fieldInfo = IL2CPP::class_get_field_from_name(klass, fieldName);
@@ -337,7 +365,7 @@ namespace LuaBridge
         lua_setfield(L, -2, "getMethodAddr");
         lua_pushcfunction(L, lua_getClass);
         lua_setfield(L, -2, "getClass");
-        lua_pushcfunction(L, lua_getFieldStatic);
+        lua_pushcfunction(L, lua_getStaticField);
         lua_setfield(L, -2, "getFieldStatic");
         lua_pushcfunction(L, lua_setStaticField);
         lua_setfield(L, -2, "setFieldStatic");

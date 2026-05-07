@@ -19,8 +19,8 @@ if pHurt then
 
     -- so, let's hook our method
     -- but, we need to know how many arguments in method. 
-    -- In Player.Hurt it is - 9
-    picka.hook(pHurt, 9, function (original, instance, damageSource, damage, hitDir, pvp, quiet, crit, cooldown, dodgeable)
+    -- In Player.Hurt it is - 10
+    picka.hook(pHurt, 10, function (original, instance, damageSource, damage, hitDir, pvp, quiet, crit, cooldown, dodgeable)
         -- if we need to use string in game, like, for example in chat, we always need to make il2cpp_string
         -- so, use picka.newString("..."), for it
         local damageStr = picka.newString("Damage taken: " .. tostring(damage))
@@ -30,17 +30,6 @@ if pHurt then
         picka.callNative(newText, damageStr, 0, 255, 0)
 
         -- for immortality, we need to call default functions, but with damage = 0
-
-        -- test
-        local statLife = picka.getField(instance, "statLife")
-        if statLife then
-            picka.log("Find statLife! " .. tostring(statLife))
-        else
-            picka.log("Field statLife not found!")
-        end
-
-        picka.setField(instance, "statLife", statLife)
-        picka.log("All hp restored!")
 
         return picka.callNative(original, instance, damageSource, 0, hitDir, pvp, quiet, crit, cooldown, dodgeable)
     end)
