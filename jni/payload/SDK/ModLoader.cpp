@@ -69,6 +69,12 @@ void ModLoader::resetAll()
 
 bool ModLoader::loadMain(const std::filesystem::path& scriptPath)
 {
+    std::string folderPath = scriptPath.parent_path().string();
+
+    std::string pathCommand = "package.path = package.path .. ';" + folderPath + "/?.lua;" + folderPath + "/?/init.lua'";
+    
+    luaL_dostring(L, pathCommand.c_str());
+
     if (luaL_dofile(L, scriptPath.c_str()) != LUA_OK) 
     {
         LOGI("LUA ERROR: %s", lua_tostring(L, -1));
