@@ -15,6 +15,7 @@
 #include "SDK/Il2Cpp/Il2CppAPI.h"
 #include "SDK/Il2Cpp/Il2CppResolver.h"
 #include "SDK/LuaAPI/LuaBridge.h"
+#include "SDK/ModLoader.h"
 
 
 #include "test_mods/no_damage.h"
@@ -25,6 +26,7 @@
 
 JavaVM* g_vm = nullptr;
 lua_State *L;
+std::unique_ptr<ModLoader> modLoader;
 
 extern "C" 
 {
@@ -140,6 +142,8 @@ int my_il2cpp_init(const char* domain_name)
     LOGI("Lua 5.4: Attempting to create state...");
     L = luaL_newstate();
 
+    modLoader = std::make_unique<ModLoader>(L, "/sdcard/Mods/");
+
     if (L)
     {
         luaL_openlibs(L);
@@ -147,21 +151,7 @@ int my_il2cpp_init(const char* domain_name)
             
         LuaBridge::RegisterAPI(L);
 
-        const char* path = "/data/local/tmp/itemSetDefaults.lua";
-        int status = luaL_loadfile(L, path);
-
-        if (status == LUA_OK) 
-        {
-            if (lua_pcall(L, 0, 0, 0) != LUA_OK) 
-            {
-                LOGI("LUA EXEC ERROR: %s", lua_tostring(L, -1));
-            }
-        } 
-        else
-        {
-            LOGI("LUA LOAD ERROR: %s", lua_tostring(L, -1));
-            LOGI("Check if file exists at: %s", path);
-        }
+        modLoader->loadAll();
     }
 
     JNIEnv* env = nullptr;

@@ -9,13 +9,16 @@
 namespace LuaBridge
 {
     lua_State* g_Lstate = nullptr;
-    uintptr_t proxy_addresses[] = 
+
+    template<std::size_t... Is>
+    constexpr auto make_proxy_addresses(std::index_sequence<Is...>) 
     {
-        (uintptr_t)HookHandler<0>,
-        (uintptr_t)HookHandler<1>,
-        (uintptr_t)HookHandler<2>,
-        (uintptr_t)HookHandler<3>,
-    };
+        return std::array<uintptr_t, sizeof...(Is)>{ (uintptr_t)HookHandler<Is>... };
+    }
+
+    static auto proxy_array = make_proxy_addresses(std::make_index_sequence<256>{}); // make 256 free hooks at once
+    uintptr_t* proxy_addresses = proxy_array.data();
+
     int current_slot = 0;
 
     int log_print(lua_State* L)

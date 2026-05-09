@@ -6,7 +6,7 @@ namespace LuaBridge
 {
     LuaHook registeredHooks[100];
 
-    uintptr_t Proxy(int slot_id, uintptr_t x0, uintptr_t x1, uintptr_t x2, uintptr_t x3)
+    uintptr_t Proxy(int slot_id, uintptr_t x0, uintptr_t x1, uintptr_t x2, uintptr_t x3, uintptr_t x4, uintptr_t x5, uintptr_t x6, uintptr_t x7)
     {
         LuaHook& hook = registeredHooks[slot_id];
 
@@ -27,8 +27,12 @@ namespace LuaBridge
         lua_pushinteger(g_Lstate, x1);
         lua_pushinteger(g_Lstate, x2);
         lua_pushinteger(g_Lstate, x3);
+        lua_pushinteger(g_Lstate, x4); 
+        lua_pushinteger(g_Lstate, x5);
+        lua_pushinteger(g_Lstate, x6);
+        lua_pushinteger(g_Lstate, x7);
 
-        if (lua_pcall(g_Lstate, 5, 1, 0) != LUA_OK) 
+        if (lua_pcall(g_Lstate, 9, 1, 0) != LUA_OK) 
         {
             LOGI("Lua Hook Error in slot %d: %s", slot_id, lua_tostring(g_Lstate, -1));
             lua_pop(g_Lstate, 1);
@@ -39,7 +43,7 @@ namespace LuaBridge
         uintptr_t result = (uintptr_t)lua_tointeger(g_Lstate, -1);
         lua_pop(g_Lstate, 1);
 
-        LOGI("Proxy called for slot: %d, func_ref: %d", slot_id, hook.lua_func_ref);
+        // LOGI("Proxy called for slot: %d, func_ref: %d", slot_id, hook.lua_func_ref);
 
         return result;
     }

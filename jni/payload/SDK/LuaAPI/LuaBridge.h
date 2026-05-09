@@ -6,7 +6,7 @@
 namespace LuaBridge
 {
     extern lua_State* g_Lstate;
-    extern uintptr_t proxy_addresses[];
+    extern uintptr_t* proxy_addresses;
     extern int current_slot;
 
     static int log_print(lua_State* L);
