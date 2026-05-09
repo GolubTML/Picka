@@ -25,7 +25,6 @@
 #include "libs/Lua54/lua.hpp"
 
 JavaVM* g_vm = nullptr;
-lua_State *L;
 std::unique_ptr<ModLoader> modLoader;
 
 extern "C" 
@@ -139,20 +138,8 @@ int my_il2cpp_init(const char* domain_name)
         LOGI("Could not find JNI_GetCreatedJavaVMs symbol!");
     }
 
-    LOGI("Lua 5.4: Attempting to create state...");
-    L = luaL_newstate();
-
-    modLoader = std::make_unique<ModLoader>(L, "/sdcard/Mods/");
-
-    if (L)
-    {
-        luaL_openlibs(L);
-        LOGI("LUA_DEBUG: State created and libs opened");
-            
-        LuaBridge::RegisterAPI(L);
-
-        modLoader->loadAll();
-    }
+    modLoader = std::make_unique<ModLoader>("/sdcard/Mods/");
+    modLoader->loadAll();
 
     JNIEnv* env = nullptr;
 
@@ -170,7 +157,7 @@ int my_il2cpp_init(const char* domain_name)
                 LOGI("Found currentActivity, creating button...");
 
                 RegisterNativeMethods(env);
-                Menu::instance = std::make_unique<Menu::ModMenu>(env, currentActivity, L);
+                Menu::instance = std::make_unique<Menu::ModMenu>(env, currentActivity, modLoader.get());
 
                 LOGI("Native menu has been initilized!");
             } 

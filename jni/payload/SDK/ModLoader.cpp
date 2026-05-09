@@ -1,8 +1,38 @@
 #include "ModLoader.h"
+#include "LuaAPI/LuaHook.h"
+#include "LuaAPI/LuaBridge.h"
 #include "log.h"
 
-ModLoader::ModLoader(lua_State* L, std::string path) : L(L), modsPath(path) { }
-ModLoader::~ModLoader() { delete L; }
+ModLoader::ModLoader(std::string path) : modsPath(path) 
+{
+    initLua();
+}
+
+ModLoader::~ModLoader() { closeLua(); }
+
+void ModLoader::initLua()
+{
+    if (L) closeLua();
+
+    L = luaL_newstate();
+    luaL_openlibs(L);
+    
+    LuaBridge::RegisterAPI(L);
+
+    LOGI("Initilized Lua!");
+}
+
+void ModLoader::closeLua()
+{
+    if (L)
+    {
+        LuaBridge::ClearAllHooks();
+
+        lua_close(L);
+        L = nullptr;
+        LOGI("Close lua state!");
+    }
+}
 
 void ModLoader::loadAll()
 {
@@ -28,6 +58,13 @@ void ModLoader::loadAll()
             }
         }
     }
+}
+
+void ModLoader::resetAll()
+{
+    LOGI("Hot reload for mods!");
+    initLua();
+    loadAll();
 }
 
 bool ModLoader::loadMain(const std::filesystem::path& scriptPath)
