@@ -5,15 +5,21 @@ namespace IL2CPP
 {
     #define IL2CPP_STATIC_FIELD 0x0010
 
+    struct Il2CppType
+    {
+        void* data;
+        unsigned int bits;
+    };
+
     struct MethodInfo
     {
         void* methodPointer;
         void* virtualMethodPointer;
         void* invoker_method;
         const char* name;
-        void *klass;
-        const void *return_type;
-        const void** parameters;
+        void *klass; // maybe, this should be Il2CppClass
+        const Il2CppType *return_type;
+        const Il2CppType** parameters;
         union
         {
             const void* rgctx_data;
@@ -31,7 +37,6 @@ namespace IL2CPP
         uint8_t parameters_count;
         uint8_t bitflags;
     };
-
 
     class Resolver
     {

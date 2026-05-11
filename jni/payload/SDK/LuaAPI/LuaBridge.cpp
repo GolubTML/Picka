@@ -6,8 +6,29 @@
 #include <android/log.h>
 #include <string>
 #include <map>
+#include "libs/libffi/include/ffi.h"
 
 #define MAX_HOOKS 256
+
+ffi_type* get_ffi_type(uint8_t il2cpp_type_enum) 
+{
+    LOGI("Mapping IL2CPP type 0x%02X", il2cpp_type_enum);
+
+    switch (il2cpp_type_enum) 
+    {
+        case 0x01: return &ffi_type_void;    // void
+        case 0x02: return &ffi_type_uint8;   // bool
+        case 0x03: return &ffi_type_sint32;  // int
+        case 0x08: return &ffi_type_float;   // float
+        case 0x09: return &ffi_type_double;  // double
+        case 0x0e: // string
+        case 0x12: // class or object
+        case 0x0f: // ptr
+            return &ffi_type_pointer;       
+        default: 
+            return &ffi_type_pointer;
+    }
+}
 
 namespace LuaBridge
 {
@@ -100,6 +121,41 @@ namespace LuaBridge
         return 1;
     }
 
+    int lua_getMethodInfo(lua_State* L)
+    {
+        void* methodInfo = nullptr;
+
+        if (lua_islightuserdata(L, 1))
+        {
+            void* klass = lua_touserdata(L, 1);
+            const char* methodName = luaL_checkstring(L, 2);
+            int args = luaL_checkinteger(L, 3);
+
+            methodInfo = IL2CPP::class_get_method_from_name(klass, methodName, args);
+        }
+        else
+        {
+            const char* assembly = luaL_checkstring(L, 1);
+            const char* namezpace = luaL_checkstring(L, 2);
+            const char* klass = luaL_checkstring(L, 3);
+            const char* method = luaL_checkstring(L, 4);
+            int args = luaL_checkinteger(L, 5);
+
+            methodInfo = IL2CPP::Resolver::FindMethod(assembly, namezpace, klass, method, args);
+        }
+
+        if (methodInfo)
+        {
+            lua_pushlightuserdata(L, methodInfo);
+        }
+        else
+        {
+            lua_pushnil(L);
+        }
+        
+        return 1;
+    }
+
     int lua_getClass(lua_State* L)
     {
         const char* assembly = luaL_checkstring(L, 1);
@@ -140,7 +196,7 @@ namespace LuaBridge
         void* fieldInfo = IL2CPP::class_get_field_from_name(klass, fieldName);
         if (!fieldInfo)
         {
-            LOGI("Field not found! %s", fieldName);
+            // LOGI("Field not found! %s", fieldName);
             lua_pushnil(L);
             return 1;
         }
@@ -212,21 +268,11 @@ namespace LuaBridge
         }
 
         void* klass = IL2CPP::object_get_class(instance);
-        void* fieldInfo = IL2CPP::class_get_field_from_name(klass, fieldName);
+        void* fieldInfo = IL2CPP::Resolver::FindField(klass, fieldName);
 
         if (!fieldInfo)
         {
-            LOGI("--- FIELD NOT FOUND: %s ---", fieldName);
-            LOGI("Listing all fields for class...");
-
-            void* iter = nullptr;
-            void* field;
-            while ((field = IL2CPP::class_get_fields(klass, &iter))) 
-            {
-                const char* name = IL2CPP::field_get_name(field);
-                LOGI("Available field: %s", name);
-            }
-            
+            // LOGI("--- FIELD NOT FOUND: %s ---", fieldName);
             lua_pushnil(L);
             return 1;
         }
@@ -297,6 +343,19 @@ namespace LuaBridge
         return 0;
     }
 
+    int lua_getFieldOffset(lua_State* L)
+    {
+        void* klass = lua_touserdata(L, 1);
+        const char* fieldName = luaL_checkstring(L, 2);
+
+        if (!klass) return 0;
+
+        size_t offset = IL2CPP::Resolver::GetFieldOffset(klass, fieldName);
+        
+        lua_pushinteger(L, (lua_Integer)offset);
+        return 1;
+    }
+
     int lua_getArrayLength(lua_State* L)
     {
         void* array = lua_touserdata(L, 1);
@@ -348,6 +407,28 @@ namespace LuaBridge
         return 1;
     }
 
+    int lua_readFloat(lua_State* L)
+    {
+        uintptr_t addr;
+
+        if (lua_isnumber(L, 1)) 
+        {
+            addr = (uintptr_t)luaL_checkinteger(L, 1);
+        } 
+        else 
+        {
+            addr = (uintptr_t)lua_touserdata(L, 1);
+        }
+
+        int offset = luaL_optinteger(L, 2, 0);
+
+        if (addr == 0) return 0;
+
+        float value = *(float*)(addr + offset);
+        lua_pushnumber(L, value);
+        return 1;
+    }
+
     int lua_callNative(lua_State* L)
     {
         int n = lua_gettop(L);
@@ -363,9 +444,9 @@ namespace LuaBridge
             addr = (uintptr_t)luaL_checkinteger(L, 1);
         }
 
-        uintptr_t args[8] = {0}; // for now, for each function, max arguments is 8.
+        uintptr_t args[16] = {0}; 
 
-        for (int i = 2; i <= n && (i - 2) < 8; ++i)
+        for (int i = 2; i <= n && (i - 2) < 16; ++i)
         {
             if (lua_isinteger(L, i)) 
             {
@@ -379,12 +460,107 @@ namespace LuaBridge
             {
                 args[i - 2] = (uintptr_t)lua_touserdata(L, i);
             } 
+            else if (lua_isnumber(L, i)) 
+            {
+                // args[i - 2] = (uintptr_t)lua_tonumber(L, i);
+                // double d = lua_tonumber(L, i);
+                // memcpy(&args[i - 2], &d, sizeof(double));
+
+                float f = (float)lua_tonumber(L, i);
+                uint32_t bits;
+                memcpy(&bits, &f, sizeof(float));
+                args[i - 2] = (uintptr_t)bits;
+            }
         }
 
-        typedef uintptr_t (*GenericFn)(uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t);
-        uintptr_t result = ((GenericFn)addr)(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
+        typedef uintptr_t (*GenericFn)(
+            uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t,
+            uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t
+        );
+
+        uintptr_t result = ((GenericFn)addr)(
+            args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7],
+            args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15]
+        );
 
         lua_pushinteger(L, (lua_Integer)result);
+        return 1;
+    }
+
+    int lua_callMethod(lua_State* L)
+    {
+        IL2CPP::MethodInfo* methodInfo = (IL2CPP::MethodInfo*)lua_touserdata(L, 1);
+        if (!methodInfo) return 0; 
+
+        bool is_static = (methodInfo->flags & 0x0010);
+        int lua_args_count = lua_gettop(L) - 1;
+
+        ffi_cif cif;
+        ffi_type* arg_types[32];
+        void* arg_values[32];
+
+        union ArgStorage
+        {
+            uintptr_t p;
+            float f;
+            int32_t i;
+        } storage[32];
+
+        for (int i = 0; i < lua_args_count; i++) 
+        {
+            int lua_idx = i + 2; 
+            
+            if (!is_static && i == 0) 
+            {
+                storage[i].p = (uintptr_t)lua_touserdata(L, lua_idx);
+                arg_types[i] = &ffi_type_pointer;
+            } 
+            else 
+            {
+                int param_idx = is_static ? i : i - 1;
+                auto* param = methodInfo->parameters[param_idx];
+                
+                const IL2CPP::Il2CppType* typeStruct = methodInfo->parameters[param_idx];
+                uint8_t raw_type = (uint8_t)(typeStruct->bits & 0xFF);
+                
+                ffi_type* f_type = get_ffi_type(raw_type);
+                arg_types[i] = f_type;
+
+                if (f_type == &ffi_type_float) 
+                {
+                    storage[i].f = (float)lua_tonumber(L, lua_idx);
+                } 
+                else if (f_type == &ffi_type_sint32 || f_type == &ffi_type_uint8) // Добавь проверку на байт
+                {
+                    storage[i].i = (int32_t)lua_tointeger(L, lua_idx);
+                } 
+                else if (lua_isnumber(L, lua_idx))
+                {
+                    storage[i].p = (uintptr_t)lua_tointeger(L, lua_idx); 
+                }
+                else if (lua_isnil(L, lua_idx)) 
+                {
+                    storage[i].p = 0;
+                }
+                else 
+                {
+                    storage[i].p = (uintptr_t)lua_touserdata(L, lua_idx);
+                }
+            }
+
+            arg_values[i] = &storage[i];
+        }
+
+        uintptr_t result = 0;
+
+        uint8_t ret_raw_type = (uint8_t)(methodInfo->return_type->bits & 0xFF);
+        ffi_type* f_ret_type = get_ffi_type(ret_raw_type);
+
+        if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, lua_args_count, f_ret_type, arg_types) == FFI_OK)
+            ffi_call(&cif, FFI_FN(methodInfo->methodPointer), &result, arg_values);
+
+        lua_pushinteger(L, (lua_Integer)result);
+
         return 1;
     }
 
@@ -455,6 +631,8 @@ namespace LuaBridge
 
         lua_pushcfunction(L, lua_getMethodAddr);
         lua_setfield(L, -2, "getMethodAddr");
+        lua_pushcfunction(L, lua_getMethodInfo);
+        lua_setfield(L, -2, "getMethodInfo");
         lua_pushcfunction(L, lua_getClass);
         lua_setfield(L, -2, "getClass");
         lua_pushcfunction(L, lua_getStaticField);
@@ -465,14 +643,21 @@ namespace LuaBridge
         lua_setfield(L, -2, "getField");
         lua_pushcfunction(L, lua_setField);
         lua_setfield(L, -2, "setField");
+        lua_pushcfunction(L, lua_getFieldOffset);
+        lua_setfield(L, -2, "getFieldOffset");
 
         lua_pushcfunction(L, lua_getArrayLength);
         lua_setfield(L, -2, "getArrayLength");
         lua_pushcfunction(L, lua_getArrayElement);
         lua_setfield(L, -2, "getArrayElement");
 
+        lua_pushcfunction(L, lua_readFloat);
+        lua_setfield(L, -2, "readFloat");
+
         lua_pushcfunction(L, lua_callNative);
         lua_setfield(L, -2, "callNative");
+        lua_pushcfunction(L, lua_callMethod);
+        lua_setfield(L, -2, "callMethod");
 
         lua_pushcfunction(L, lua_hook);
         lua_setfield(L, -2, "hook");

@@ -71,9 +71,14 @@ bool ModLoader::loadMain(const std::filesystem::path& scriptPath)
 {
     std::string folderPath = scriptPath.parent_path().string();
 
-    std::string pathCommand = "package.path = package.path .. ';" + folderPath + "/?.lua;" + folderPath + "/?/init.lua'";
-    
-    luaL_dostring(L, pathCommand.c_str());
+    std::string pathCommand = "package.path = package.path .. \";" + folderPath + "/?.lua;" + folderPath + "/?/init.lua\"";
+    LOGI("Setting LUA path: %s", pathCommand.c_str());
+
+    if (luaL_dostring(L, pathCommand.c_str()) != LUA_OK) 
+    {
+        LOGI("PATH ERROR: %s", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
 
     if (luaL_dofile(L, scriptPath.c_str()) != LUA_OK) 
     {

@@ -14,6 +14,7 @@ namespace LuaBridge
     static int lua_newString(lua_State* L);
 
     static int lua_getMethodAddr(lua_State* L);
+    static int lua_getMethodInfo(lua_State* L); // the same as lua_getMethodAddr, but we get MethodInfo now
     
     static int lua_getClass(lua_State* L);
     static int lua_getStaticField(lua_State* L);
@@ -22,11 +23,15 @@ namespace LuaBridge
     // this methods for instances
     static int lua_getField(lua_State* L);
     static int lua_setField(lua_State* L);
+    static int lua_getFieldOffset(lua_State* L);
 
     static int lua_getArrayLength(lua_State* L);
     static int lua_getArrayElement(lua_State* L);
 
+    static int lua_readFloat(lua_State* L); // for structure, not for class
+
     static int lua_callNative(lua_State* L);
+    static int lua_callMethod(lua_State* L); // like callNative, but takes MethodInfo. And, uses specific arguments type
     static int lua_hook(lua_State* L);
 
     void RegisterAPI(lua_State* L);
