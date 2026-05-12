@@ -19,10 +19,12 @@ ffi_type* get_ffi_type(uint8_t il2cpp_type_enum)
         case 0x01: return &ffi_type_void;    // void
         case 0x02: return &ffi_type_uint8;   // bool
         case 0x03: return &ffi_type_sint32;  // int
-        case 0x08: return &ffi_type_float;   // float
+        case 0x08: return &ffi_type_sint32;
+        case 0x0C: return &ffi_type_float;   // float and System.Single
         case 0x09: return &ffi_type_double;  // double
         case 0x0e: // string
-        case 0x12: // class or object
+        case 0x12: // class
+        case 0X1C: // object
         case 0x0f: // ptr
             return &ffi_type_pointer;       
         default: 
@@ -521,8 +523,18 @@ namespace LuaBridge
                 auto* param = methodInfo->parameters[param_idx];
                 
                 const IL2CPP::Il2CppType* typeStruct = methodInfo->parameters[param_idx];
-                uint8_t raw_type = (uint8_t)(typeStruct->bits & 0xFF);
+
+                uintptr_t addr = (uintptr_t)typeStruct;
+                // LOGI("Param %d hex dump: %02X %02X %02X %02X %02X %02X %02X %02X | %02X %02X %02X %02X", 
+                //     param_idx,
+                //     *(uint8_t*)(addr), *(uint8_t*)(addr+1), *(uint8_t*)(addr+2), *(uint8_t*)(addr+3),
+                //     *(uint8_t*)(addr+4), *(uint8_t*)(addr+5), *(uint8_t*)(addr+6), *(uint8_t*)(addr+7),
+                //     *(uint8_t*)(addr+8), *(uint8_t*)(addr+9), *(uint8_t*)(addr+10), *(uint8_t*)(addr+11));
+
+                uint8_t raw_type = *(uint8_t*)((uintptr_t)typeStruct + 10); // this offset is crazy
                 
+                // LOGI("Param %d: Raw Type Byte = 0x%02X", param_idx, raw_type);
+
                 ffi_type* f_type = get_ffi_type(raw_type);
                 arg_types[i] = f_type;
 

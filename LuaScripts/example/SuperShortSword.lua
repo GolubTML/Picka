@@ -77,7 +77,7 @@ local function wrapClass(namespace, klassName, assemblies)
     if not class then return nil end
 
     local cache = {}
-    local wrapper = {}
+    local wrapper = { _ptr = class }
 
     setmetatable(wrapper, {
         __index = function (t, key)
@@ -154,10 +154,9 @@ if Utils == nil then picka.log("Cannot get wrapped Utils class!") end
 local Projectile = wrapClass("Terraria", "Projectile")
 if Projectile == nil then picka.log("Cannot get wrapped Projectile class!") end
 
-
--- yes, for test, i use FUCKING lighning
-local LightingClass = picka.getClass("Assembly-CSharp", "Terraria", "Lighting")
-local addLightMethod = picka.getMethodInfo(LightingClass, "AddLight", 5)
+local MainClass = picka.getClass("Assembly-CSharp", "Terraria", "Main")
+local Main = wrapClass("Terraria", "Main")
+local screenPosOffset = picka.getFieldOffset(MainClass, "screenPosition")
 
 local player = nil
 
@@ -167,67 +166,83 @@ picka.hook(itemCheck_Shoot, 4, function (original, instance, i, sItem, weaponDam
     item = wrapInstance(sItem, "Terraria", "Item")
     if item == nil then picka.log("Cannot get Item instance!") end
 
+    player = wrapInstance(instance, "Terraria", "Player")
+    if player == nil then picka.log("Cannot get Player instance!") end
+
     if item.type == 3507 then
-        -- AND we need player instance too
-        player = wrapInstance(instance, "Terraria", "Player")
-        if player == nil then picka.log("Cannot get Player instance!") end
+        if player.itemAnimation == player.itemAnimationMax - 1 then
+            local px = picka.readFloat(instance, positionOffset)
+            local py = picka.readFloat(instance, positionOffset + 4)
 
-        --[[
-        local px = picka.readFloat(instance, 20)
-        picka.log("Type of instance: " .. type(instance))
-        ]]
+            local screenWidth = Main.get_screenWidth() 
+            local screenHeight = Main.get_screenHeight()
 
-        local px = picka.readFloat(instance, positionOffset)
-        local py = picka.readFloat(instance, positionOffset + 4)
-        
-        picka.log("Extracted Pos: " .. tostring(px) .. ", " .. tostring(py))
+            local mX = Main.get_mouseX()
+            local mY = Main.get_mouseY()
 
-        local vel = { x = 0, y = 0 } -- let's say, it's zero for now
+            local vel = { x = 0, y = 0 } -- let's say, it's zero for now
 
-        local source = Projectile.GetNoneSource()
-        picka.log("Step 2: Source obtained: " .. tostring(source))
-        
-        picka.log("Step 3: Calling NewProjectile")
-        Projectile.NewProjectile(0, 
-            px, py,
-            0.0, -10.0,
-            9,
-            10,
-            0.0,
-            player.whoAmI,
-            0.0,
-            0.0,
-            0.0,
-            0 -- maybe, here shouldn't be nil?
-        )
-        
-        local tileX = math.floor(px / 16)
-        local tileY = math.floor(py / 16)
+            local dx = mX - (screenWidth / 2)
+            local dy = mY - (screenHeight / 2)
+            local dist = math.sqrt(dx*dx + dy*dy)
 
-        picka.callMethod(addLightMethod, tileX, tileY, 1.0, 0.0, 0.0)
-        picka.log("AddLight (tile) called!")
+            if dist < 1 then dist = 1 end
 
-        picka.log("Projectile spawned at: " .. px .. " " .. py .. " Source: " .. tostring(source))
+            local speed = item.shootSpeed
+            if speed == 0 then speed = 12.0 end
 
-        --[[ for i = -1, 1 do
-            local angle = i * 15
-            local velocity = Utils.RotatedBy(vel, pos, angle)
+            local velX = (dx / dist) * speed
+            local velY = (dy / dist) * speed
 
-            Projectile.NewProjectile(Projectile.GetNoneSource(), 
-                pos, velocity,
-                item.shoot,
-                50,
-                0.2,
+            local source = Projectile.GetNoneSource()
+
+            picka.log("Projectile spawned at: " .. px .. " " .. py .. " Source: " .. tostring(source))
+            
+            picka.log("Extracted Pos: " .. tostring(px) .. ", " .. tostring(py))
+
+            picka.log(string.format("[DEBUG] Player: %.1f,%.1f | Mouse: %d,%d", px, py, mX, mY))
+            picka.log(string.format("[DEBUG] Final Vector: %.2f, %.2f", velX, velY))
+
+            --[[Projectile.NewProjectile(source, 
+                px, py,
+                velX, velY,
+                1,
+                10,
+                0.0,
                 player.whoAmI,
-                0,
-                0,
-                0,
-                nil
-            )
+                0.0,
+                0.0,
+                0.0,
+                0
+            )]]
 
-            -- oh fuck
-        end ]]
+            local baseAngle = math.atan(dy, dx)
 
+            for i = -1, 1 do
+                -- so, we can't use Utils.RotateBy, and so we will make our own
+                local currentAngle = baseAngle + (i * 0.15) -- 0.25 - angle
+                local vX = math.cos(currentAngle) * speed
+                local vY = math.sin(currentAngle) * speed
+                
+                Projectile.NewProjectile(source, 
+                    px, py,
+                    vX, vY,
+                    79,
+                    item.damage,
+                    0.4,
+                    player.whoAmI,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0
+                )
+
+                -- oh fuck
+                -- this shit still has a lot of problems, but now it working!
+            end
+
+        end
+        
         return
     end
 
