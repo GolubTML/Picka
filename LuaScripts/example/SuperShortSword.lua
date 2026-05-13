@@ -136,6 +136,7 @@ picka.hook(iSetDefaults, 2, function (original, instance, Type, variant)
 
     if Type == 3507 then
         item.damage = 500 -- let's damage will be 500 for example
+        item.shootSpeed = 10 -- and shoot speed for example 10
     end
 end)
 
@@ -203,19 +204,6 @@ picka.hook(itemCheck_Shoot, 4, function (original, instance, i, sItem, weaponDam
             picka.log(string.format("[DEBUG] Player: %.1f,%.1f | Mouse: %d,%d", px, py, mX, mY))
             picka.log(string.format("[DEBUG] Final Vector: %.2f, %.2f", velX, velY))
 
-            --[[Projectile.NewProjectile(source, 
-                px, py,
-                velX, velY,
-                1,
-                10,
-                0.0,
-                player.whoAmI,
-                0.0,
-                0.0,
-                0.0,
-                0
-            )]]
-
             local baseAngle = math.atan(dy, dx)
 
             for i = -1, 1 do
@@ -224,10 +212,12 @@ picka.hook(itemCheck_Shoot, 4, function (original, instance, i, sItem, weaponDam
                 local vX = math.cos(currentAngle) * speed
                 local vY = math.sin(currentAngle) * speed
                 
+                -- let's make more interesting result
+
                 Projectile.NewProjectile(source, 
                     px, py,
                     vX, vY,
-                    79,
+                    math.random(1000), -- use ALL 1000 projectiles in game 
                     item.damage,
                     0.4,
                     player.whoAmI,
@@ -238,9 +228,7 @@ picka.hook(itemCheck_Shoot, 4, function (original, instance, i, sItem, weaponDam
                 )
 
                 -- oh fuck
-                -- this shit still has a lot of problems, but now it working!
             end
-
         end
         
         return
