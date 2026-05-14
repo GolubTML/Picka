@@ -1,4 +1,5 @@
 #include "LuaBridge.h"
+#include "LuaHelper.h"
 #include "../Il2Cpp/Il2CppAPI.h"
 #include "../Il2Cpp/Il2CppResolver.h"
 #include "../hook.h"
@@ -522,21 +523,45 @@ namespace LuaBridge
                 int param_idx = is_static ? i : i - 1;
                 auto* param = methodInfo->parameters[param_idx];
                 
-                const IL2CPP::Il2CppType* typeStruct = methodInfo->parameters[param_idx];
-
-                uintptr_t addr = (uintptr_t)typeStruct;
-                // LOGI("Param %d hex dump: %02X %02X %02X %02X %02X %02X %02X %02X | %02X %02X %02X %02X", 
-                //     param_idx,
-                //     *(uint8_t*)(addr), *(uint8_t*)(addr+1), *(uint8_t*)(addr+2), *(uint8_t*)(addr+3),
-                //     *(uint8_t*)(addr+4), *(uint8_t*)(addr+5), *(uint8_t*)(addr+6), *(uint8_t*)(addr+7),
-                //     *(uint8_t*)(addr+8), *(uint8_t*)(addr+9), *(uint8_t*)(addr+10), *(uint8_t*)(addr+11));
-
-                uint8_t raw_type = *(uint8_t*)((uintptr_t)typeStruct + 10); // this offset is crazy
+                const IL2CPP::Il2CppType* typeStruct = IL2CPP::method_get_param(methodInfo, param_idx);
+                /* uintptr_t addr = (uintptr_t)typeStruct;
+                LOGI("Param %d hex dump: %02X %02X %02X %02X %02X %02X %02X %02X | %02X %02X %02X %02X", 
+                    param_idx,
+                    *(uint8_t*)(addr), *(uint8_t*)(addr+1), *(uint8_t*)(addr+2), *(uint8_t*)(addr+3),
+                    *(uint8_t*)(addr+4), *(uint8_t*)(addr+5), *(uint8_t*)(addr+6), *(uint8_t*)(addr+7),
+                    *(uint8_t*)(addr+8), *(uint8_t*)(addr+9), *(uint8_t*)(addr+10), *(uint8_t*)(addr+11)); */
+                LOGI("Method: %s, ParamIdx: %d, TypePtr: %p", methodInfo->name, param_idx, typeStruct);
                 
-                // LOGI("Param %d: Raw Type Byte = 0x%02X", param_idx, raw_type);
+                if (lua_istable(L, lua_idx)) 
+                {
+                    IL2CPP::Il2CppClass* structClass = IL2CPP::class_from_type(typeStruct);
+                    uint32_t align = 0;
+                    int size = IL2CPP::class_value_size(structClass, &align);
+                    
+                    void* structBuffer = alloca(size);
+                    Helper::fillStructFromTable(L, lua_idx, structClass, structBuffer);
+
+                    if (size <= 8) 
+                    {
+                        storage[i].p = 0; 
+                        memcpy(&storage[i].p, structBuffer, size);
+                        
+                        arg_types[i] = &ffi_type_uint64;
+                        arg_values[i] = &storage[i].p;
+                    } 
+                    else 
+                    {
+                        arg_values[i] = structBuffer;
+                        arg_types[i] = &ffi_type_pointer; // Или ffi_struct
+                    }
+                    continue; 
+                }
+
+                uint8_t raw_type = IL2CPP::type_get_type(typeStruct);
 
                 ffi_type* f_type = get_ffi_type(raw_type);
                 arg_types[i] = f_type;
+
 
                 if (f_type == &ffi_type_float) 
                 {
@@ -554,6 +579,50 @@ namespace LuaBridge
                 {
                     storage[i].p = 0;
                 }
+                /*else if (lua_istable(L, lua_idx))
+                {
+                    LOGI("Processing table as structure for ParamIdx: %d", param_idx);
+
+                    IL2CPP::Il2CppClass* structClass = IL2CPP::class_from_type(typeStruct);
+                    if (!structClass) 
+                    {
+                        LOGI("Error: Could not get class from type!");
+                        return 0;
+                    }
+
+                    uint32_t align = 0;
+                    int size = IL2CPP::class_value_size(structClass, &align);
+                    LOGI("Structure: %s, Size: %i", IL2CPP::field_get_name(structClass), size);
+
+                    void* structBuffer = alloca(size);
+                    Helper::fillStructFromTable(L, lua_idx, structClass, structBuffer);
+
+                    if (size <= 8)
+                    {
+                        LOGI("Passing structure as uint64 (size %d)", size);
+                        arg_values[i] = structBuffer; 
+                        arg_types[i] = &ffi_type_uint64;
+                    }
+                    else if (size <= 16)
+                    {
+                        LOGI("Passing structure as 16-byte FFI struct");
+                        static ffi_type ffi_struct_16;
+                        static ffi_type* elements[3] = { &ffi_type_uint64, &ffi_type_uint64, NULL };
+                        ffi_struct_16.size = 16;
+                        ffi_struct_16.alignment = 8;
+                        ffi_struct_16.type = FFI_TYPE_STRUCT;
+                        ffi_struct_16.elements = elements;
+
+                        arg_values[i] = structBuffer;
+                        arg_types[i] = &ffi_struct_16;
+                    }
+                    else
+                    {
+                        LOGI("Passing structure as pointer (size %d)", size);
+                        arg_values[i] = structBuffer;
+                        arg_types[i] = &ffi_type_pointer;
+                    }
+                }*/
                 else 
                 {
                     storage[i].p = (uintptr_t)lua_touserdata(L, lua_idx);
