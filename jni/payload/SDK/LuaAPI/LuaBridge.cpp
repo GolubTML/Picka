@@ -88,12 +88,12 @@ namespace LuaBridge
 
     int lua_getMethodAddr(lua_State* L)
     {
-        void* methodInfo = nullptr;
+        IL2CPP::MethodInfo* methodInfo = nullptr;
 
         if (lua_islightuserdata(L, 1))
         {
             // if we want write picka.getMethodPtr(klass, methodName, argsCount)
-            void* klass = lua_touserdata(L, 1);
+            IL2CPP::Il2CppClass* klass = (IL2CPP::Il2CppClass*)lua_touserdata(L, 1);
             const char* methodName = luaL_checkstring(L, 2);
             int args = luaL_checkinteger(L, 3);
 
@@ -125,11 +125,11 @@ namespace LuaBridge
 
     int lua_getMethodInfo(lua_State* L)
     {
-        void* methodInfo = nullptr;
+        IL2CPP::MethodInfo* methodInfo = nullptr;
 
         if (lua_islightuserdata(L, 1))
         {
-            void* klass = lua_touserdata(L, 1);
+            IL2CPP::Il2CppClass* klass = (IL2CPP::Il2CppClass*)lua_touserdata(L, 1);
             const char* methodName = luaL_checkstring(L, 2);
             int args = luaL_checkinteger(L, 3);
 
@@ -164,7 +164,7 @@ namespace LuaBridge
         const char* namezpace = luaL_checkstring(L, 2);
         const char* klassName = luaL_checkstring(L, 3);
 
-        void* klass = IL2CPP::Resolver::FindClass(assembly, namezpace, klassName);
+        IL2CPP::Il2CppClass* klass = IL2CPP::Resolver::FindClass(assembly, namezpace, klassName);
 
         if (klass)
         {
@@ -180,12 +180,12 @@ namespace LuaBridge
 
     int lua_getStaticField(lua_State* L)
     {
-        void* klass = nullptr;
+        IL2CPP::Il2CppClass* klass = nullptr;
         const char* fieldName = nullptr;
 
         if (lua_islightuserdata(L, 1))
         {
-            klass = lua_touserdata(L, 1);
+            klass = (IL2CPP::Il2CppClass*)lua_touserdata(L, 1);
             fieldName = luaL_checkstring(L, 2);
         }
         else
@@ -218,7 +218,7 @@ namespace LuaBridge
     int lua_setStaticField(lua_State* L)
     {
         if (!lua_islightuserdata(L, 1)) return luaL_error(L, "Arg 1 must be class pointer");
-        void* klass = lua_touserdata(L, 1);
+        IL2CPP::Il2CppClass* klass = (IL2CPP::Il2CppClass*)lua_touserdata(L, 1);
         const char* fieldName = luaL_checkstring(L, 2);
 
         void* fieldInfo = IL2CPP::class_get_field_from_name(klass, fieldName);
@@ -269,7 +269,7 @@ namespace LuaBridge
             return 0;
         }
 
-        void* klass = IL2CPP::object_get_class(instance);
+        IL2CPP::Il2CppClass* klass = IL2CPP::object_get_class(instance);
         void* fieldInfo = IL2CPP::Resolver::FindField(klass, fieldName);
 
         if (!fieldInfo)
@@ -311,7 +311,7 @@ namespace LuaBridge
             return 0;
         }
 
-        void* klass = IL2CPP::object_get_class(instance);
+        IL2CPP::Il2CppClass* klass = IL2CPP::object_get_class(instance);
         void* fieldInfo = IL2CPP::class_get_field_from_name(klass, fieldName);
 
         if (!fieldInfo)
@@ -347,7 +347,7 @@ namespace LuaBridge
 
     int lua_getFieldOffset(lua_State* L)
     {
-        void* klass = lua_touserdata(L, 1);
+        IL2CPP::Il2CppClass* klass = (IL2CPP::Il2CppClass*)lua_touserdata(L, 1);
         const char* fieldName = luaL_checkstring(L, 2);
 
         if (!klass) return 0;

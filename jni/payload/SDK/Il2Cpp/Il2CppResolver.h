@@ -9,8 +9,8 @@ namespace IL2CPP
     class Resolver
     {
         public:
-            static void* FindClass(const char* assemlyName, const char* namezpace, const char* klassName);
-            static void* FindMethod(const char* assemblyName, const char* namezpace, const char* klassName, const char* methodName, int argsCount);
+            static Il2CppClass* FindClass(const char* assemlyName, const char* namezpace, const char* klassName);
+            static MethodInfo* FindMethod(const char* assemblyName, const char* namezpace, const char* klassName, const char* methodName, int argsCount);
             static void* FindField(void* klass, const char* fieldName);
             static void* FindStaticField(void* klass, const char* fieldName);
 

@@ -3,7 +3,7 @@
 
 namespace IL2CPP
 {
-    void* Resolver::FindClass(const char* assemlyName, const char* namezpace, const char* klassName)
+    Il2CppClass* Resolver::FindClass(const char* assemlyName, const char* namezpace, const char* klassName)
     {
         size_t size;
         Il2CppAssembly** assemblies = domain_get_assemblies(domain_get(), &size);
@@ -12,7 +12,7 @@ namespace IL2CPP
         {
             Il2CppImage* image = assembly_get_image(assemblies[i]);
 
-            void* klass = class_from_name(image, namezpace, klassName);
+            Il2CppClass* klass = class_from_name(image, namezpace, klassName);
 
             if (klass)
             {
@@ -23,7 +23,7 @@ namespace IL2CPP
         return nullptr;
     }
 
-    void* Resolver::FindMethod(const char* assemblyName, const char* namezpace, const char* klassName, const char* methodName, int argsCount)
+    MethodInfo* Resolver::FindMethod(const char* assemblyName, const char* namezpace, const char* klassName, const char* methodName, int argsCount)
     {
         size_t size;
         Il2CppAssembly** assemblies = domain_get_assemblies(domain_get(), &size);
@@ -32,11 +32,11 @@ namespace IL2CPP
         {
             Il2CppImage* image = assembly_get_image(assemblies[i]);
 
-            void* klass = class_from_name(image, namezpace, klassName);
+            Il2CppClass* klass = class_from_name(image, namezpace, klassName);
             
             if (klass)
             {
-                void* method = class_get_method_from_name(klass, methodName, argsCount);
+                MethodInfo* method = class_get_method_from_name(klass, methodName, argsCount);
 
                 if (method)
                 {
