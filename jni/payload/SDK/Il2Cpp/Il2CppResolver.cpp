@@ -6,11 +6,11 @@ namespace IL2CPP
     void* Resolver::FindClass(const char* assemlyName, const char* namezpace, const char* klassName)
     {
         size_t size;
-        void** assemblies = domain_get_assemblies(domain_get(), &size);
+        Il2CppAssembly** assemblies = domain_get_assemblies(domain_get(), &size);
 
         for (size_t i = 0; i < size; ++i)
         {
-            void* image = assembly_get_image(assemblies[i]);
+            Il2CppImage* image = assembly_get_image(assemblies[i]);
 
             void* klass = class_from_name(image, namezpace, klassName);
 
@@ -26,11 +26,11 @@ namespace IL2CPP
     void* Resolver::FindMethod(const char* assemblyName, const char* namezpace, const char* klassName, const char* methodName, int argsCount)
     {
         size_t size;
-        void** assemblies = domain_get_assemblies(domain_get(), &size);
+        Il2CppAssembly** assemblies = domain_get_assemblies(domain_get(), &size);
 
         for (size_t i = 0; i < size; ++i)
         {
-            void* image = assembly_get_image(assemblies[i]);
+            Il2CppImage* image = assembly_get_image(assemblies[i]);
 
             void* klass = class_from_name(image, namezpace, klassName);
             

@@ -12,7 +12,7 @@
 
 ffi_type* get_ffi_type(uint8_t il2cpp_type_enum) 
 {
-    LOGI("Mapping IL2CPP type 0x%02X", il2cpp_type_enum);
+    // LOGI("Mapping IL2CPP type 0x%02X", il2cpp_type_enum);
 
     switch (il2cpp_type_enum) 
     {

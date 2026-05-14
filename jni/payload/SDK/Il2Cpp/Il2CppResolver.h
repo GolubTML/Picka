@@ -1,42 +1,10 @@
 #include "Il2CppAPI.h"
+#include "Il2CppStructs.h"
 #include <string>
 
 namespace IL2CPP
 {
     #define IL2CPP_STATIC_FIELD 0x0010
-
-    struct Il2CppType
-    {
-        void* data;
-        unsigned int bits;
-    };
-
-    struct MethodInfo
-    {
-        void* methodPointer;
-        void* virtualMethodPointer;
-        void* invoker_method;
-        const char* name;
-        void *klass; // maybe, this should be Il2CppClass
-        const Il2CppType *return_type;
-        const Il2CppType** parameters;
-        union
-        {
-            const void* rgctx_data;
-            const void* methodMetadataHandle;
-        };
-        union
-        {
-            const void* genericMethod;
-            const void* genericContainerHandle;
-        };
-        uint32_t token;
-        uint16_t flags;
-        uint16_t iflags;
-        uint16_t slot;
-        uint8_t parameters_count;
-        uint8_t bitflags;
-    };
 
     class Resolver
     {

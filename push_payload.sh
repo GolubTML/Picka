@@ -2,10 +2,14 @@
 
 PACKAGE=com.and.games505.TerrariaPaid
 
-rm payload.so
-./jni/payload/build_payload.sh
+make -C jni/payload -j$(nproc)
 
-adb push payload.so /sdcard/Android/data/$PACKAGE/files/payload.so
+if [ $? -ne 0 ]; then
+    echo "Compilation FAILED!"
+    exit 1
+fi
+
+adb push build/payload/payload.so /sdcard/Android/data/$PACKAGE/files/payload.so
 
 echo "cp /sdcard/Android/data/$PACKAGE/files/payload.so /data/data/$PACKAGE/files/payload.so" | sudo waydroid shell
 

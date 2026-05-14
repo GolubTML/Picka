@@ -6,5 +6,4 @@ JavaHelper/FloatButtonHelper$1.class
 JavaHelper/classes.dex
 libil2cpp.so
 libil2cpp.so.patched
-libloader.so
-payload.so
+build/
