@@ -1,3 +1,5 @@
+# Picka Lua API Documentation
+
 All mods for Picka written in Lua via specific API. Currently, Picka API only give 16 functions for mods, but for now, it's more than enough. For better understanding of modding with Lua, I recommend to learn Lua itself. 
 
 Picka API currently provides 16 methods., and here are list of it:
