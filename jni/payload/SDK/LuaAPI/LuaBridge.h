@@ -21,7 +21,7 @@ namespace LuaBridge
     static int lua_setStaticField(lua_State* L);
 
     // this methods for instances
-    static int lua_getField(lua_State* L);
+    static int lua_getField(lua_State* L);  
     static int lua_setField(lua_State* L);
     static int lua_getFieldOffset(lua_State* L);
 
