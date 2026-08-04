@@ -9,12 +9,12 @@ void init()
 {
     LOGI("We are in! Loading payload..");
 
-    void* handle = dlopen("/data/data/com.and.games505.TerrariaPaid/files/payload.so", RTLD_NOW); // для теста пусть будет в корневой папке
+    void* handle = dlopen("/data/data/com.and.games505.TerrariaPaid/files/libpayload.so", RTLD_NOW);
     if (!handle)
     {
         LOGI("Maybe, payload.so in apk?..");
 
-        handle = dlopen("payload.so", RTLD_NOW);
+        handle = dlopen("libpayload.so", RTLD_NOW);
 
         if (!handle)
         {

@@ -9,9 +9,9 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-adb push build/payload/payload.so /sdcard/Android/data/$PACKAGE/files/payload.so
+adb push build/payload/libpayload.so /sdcard/Android/data/$PACKAGE/files/libpayload.so
 
-echo "cp /sdcard/Android/data/$PACKAGE/files/payload.so /data/data/$PACKAGE/files/payload.so" | sudo waydroid shell
+echo "cp /sdcard/Android/data/$PACKAGE/files/libpayload.so /data/data/$PACKAGE/files/libpayload.so" | sudo waydroid shell
 
 adb shell am force-stop $PACKAGE
 sleep 1

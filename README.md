@@ -8,11 +8,11 @@ And so much more.
 
 To use picka, firstly you need to compile payload and loader. For this, use following command:
 ``` Shell
-make -C jni/payload j$(nproc)
+make -C jni/payload -j$(nproc)
 ```
 This is for payload.so. 
 ``` Shell
-make -C jni/loader j$(nproc)
+make -C jni/loader -j$(nproc)
 ```
 And this is for loader.
 

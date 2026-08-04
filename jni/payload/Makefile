@@ -20,16 +20,16 @@ LDFLAGS  := -shared -llog -landroid -ldl -static-libstdc++ -Wl,--export-dynamic
 
 .PHONY: all clean
 
-all: $(BUILD_DIR) payload.so
+all: $(BUILD_DIR) libpayload.so
 
 $(BUILD_DIR):
 	@mkdir -p $(sort $(dir $(CPP_OBJS) $(LUA_OBJS)))
 
-payload.so: $(LUA_OBJS) $(CPP_OBJS)
+libpayload.so: $(LUA_OBJS) $(CPP_OBJS)
 	@echo "Linking $@"
 	@$(CXX) $(LDFLAGS) -o $@ $^ $(FFI_DIR)/libffi.a
-	@cp $@ ../../build/payload/payload.so
-	@rm payload.so
+	@cp $@ ../../build/payload/libpayload.so
+	@rm libpayload.so
 
 $(BUILD_DIR)/%.o: %.cpp
 	@echo "Compiling $<"
@@ -40,4 +40,4 @@ $(BUILD_DIR)/%.o: %.c
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(BUILD_DIR) payload.so
+	rm -rf $(BUILD_DIR) libpayload.so
