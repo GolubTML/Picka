@@ -3,6 +3,8 @@
 #include "../SDK/Il2Cpp/Il2CppResolver.h"
 #include "../SDK/SDK.h"
 #include "../log.h"
+#include "../SDK/LuaAPI/LuaBridge.h"
+#include "../SDK/ModLoader.h"
 #include <string>
 
 size_t cached_text_offset = 0;
@@ -115,7 +117,33 @@ void my_ProcessIncomingMessage(void* instance, void* chatMessage, int clientID)
                 }
             }
 
-            if (cmd.find("!modlist")) { /* will add soon */ }
+            if (cmd.find("!modlist") == 0) 
+            { 
+                ModLoader* loader = LuaBridge::getModLoader();
+                if (!loader)
+                {
+                    SDK::Chat("ModLoader not avaible!", {255, 0, 0});
+                    return;
+                }
+
+                auto& mods = loader->getAllMods();
+
+                if (mods.empty())
+                {
+                    SDK::Chat("No mods loaded", {255, 255, 0});
+                    return;
+                }
+
+                SDK::Chat("Loaded mods:", {0, 255, 255});
+                for (auto& mod : mods)
+                {
+                    std::string line = " -- " + mod.name + " v" + mod.version + " by " + mod.author;
+                    SDK::Chat(line.c_str(), {255, 255, 255});
+                }
+
+                std::string totalMods = "Total mods: " + std::to_string(mods.size());
+                SDK::Chat(totalMods.c_str(), {255, 255, 0});
+            }
         }
     }
 

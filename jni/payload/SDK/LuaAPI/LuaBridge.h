@@ -11,11 +11,17 @@ namespace LuaBridge
     extern uintptr_t* proxy_addresses;
     extern int current_slot;
 
+    // can be a bad idea
+    ModLoader* getModLoader();
+
     static int log_print(lua_State* L);
     
     static int lua_newString(lua_State* L);
 
     static int lua_getModName(lua_State* L);
+    static int lua_getModAuthor(lua_State* L);
+    static int lua_getModVersion(lua_State* L);
+    static int lua_getModInfo(lua_State* L);
 
     static int lua_getMethodAddr(lua_State* L);
     static int lua_getMethodInfo(lua_State* L); // the same as lua_getMethodAddr, but we get MethodInfo now

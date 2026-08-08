@@ -77,6 +77,8 @@ namespace LuaBridge
         return nullptr;
     }
 
+    ModLoader* getModLoader() { return g_ModLoader; }
+
     int log_print(lua_State* L)
     {
         int n = lua_gettop(L);

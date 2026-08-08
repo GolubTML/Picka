@@ -73,13 +73,13 @@ namespace IL2CPP
 
         if (!string_to_utf8) 
         {
-            LOGI("Attempting fallback for string_to_utf8...");
+            LOGD("Attempting fallback for string_to_utf8...");
             string_to_utf8 = (t_string_to_utf8)dlsym(handle, "il2cpp_string_to_utf8");
         }
 
         if (!string_to_utf8) 
         {
-            LOGI("CRITICAL: il2cpp_string_to_utf8 TOTALLY not found!");
+            LOGE("CRITICAL: il2cpp_string_to_utf8 TOTALLY not found!");
         } 
         else 
         {

@@ -128,7 +128,7 @@ namespace IL2CPP
             currentKlass = class_get_parent(currentKlass);
         }
 
-        LOGI("Field %s not found!", fieldName);
+        LOGE("Field %s not found!", fieldName);
         return 0;
     }
 
