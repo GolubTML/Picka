@@ -62,7 +62,7 @@ int hook_function(uintptr_t target, uintptr_t hook, uintptr_t* original, int cou
 
     if (trampoline == MAP_FAILED)
     {
-        LOGI("mmap failed!");
+        LOGE("mmap failed!");
         return -1;
     }
 
@@ -102,7 +102,7 @@ int hook_function(uintptr_t target, uintptr_t hook, uintptr_t* original, int cou
 
         if ((instr & 0xFFFFFC1F) == 0xD61F0000) 
         { 
-            LOGI("Detected Branch to register at offset %d, copying as is but high risk!", copied);
+            LOGW("Detected Branch to register at offset %d, copying as is but high risk!", copied);
         }
 
         copied++;
@@ -186,7 +186,7 @@ void InstallDynamicHooks(std::vector<HookTarget> hooks)
         }
         else
         {
-            LOGI("Failed to find: %s.%s", target.klass, target.method);
+            LOGE("Failed to find: %s.%s", target.klass, target.method);
         }
     }
 }

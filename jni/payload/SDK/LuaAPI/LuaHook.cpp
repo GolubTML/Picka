@@ -38,7 +38,7 @@ namespace LuaBridge
 
             if (!lua_isfunction(g_Lstate, -1)) 
             {
-                LOGI("Critical Error: Slot %d, Ref %d is TYPE %s (not a function!)", 
+                M_LOGE("Critical Error: Slot %d, Ref %d is TYPE %s (not a function!)", 
                     slot_id, callback_ref, lua_typename(g_Lstate, lua_type(g_Lstate, -1)));
                 lua_pop(g_Lstate, 1);
             }
@@ -64,7 +64,7 @@ namespace LuaBridge
             }
             else
             {
-                LOGI("Lua Error in slot %d: %s", slot_id, lua_tostring(g_Lstate, -1));
+                M_LOGI("Lua Error in slot %d: %s", slot_id, lua_tostring(g_Lstate, -1));
                 lua_pop(g_Lstate, 1);
             }
 
@@ -85,6 +85,6 @@ namespace LuaBridge
             registeredHooks[i].callbacks.clear();
         }
 
-        LOGI("Cleared all hooks!");
+        M_LOGI("Cleared all hooks!");
     }
 }

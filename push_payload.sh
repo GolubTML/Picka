@@ -19,4 +19,4 @@ adb shell am start -n $PACKAGE/com.unity3d.player.UnityPlayerActivity
 
 echo "Done! Watching logs..."
 adb logcat --clear
-adb logcat | grep -E "Pure|Payload"
+adb logcat | grep -E "Pure|Picka|Payload|Mod"

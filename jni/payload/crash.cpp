@@ -7,7 +7,7 @@
 
 void crash_handler(int sig, siginfo_t* info, void* ucontext)
 {
-    FILE* f = fopen("/sdcard/crash.txt", "w");
+    FILE* f = fopen("/sdcard/Mods/crash.txt", "w");
     if (!f) f = fopen("/sdcard/Android/data/com.and.games505.TerrariaPaid/files/crash.txt", "w");
 
     if (f)

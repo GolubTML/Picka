@@ -9,8 +9,8 @@ FloatButton::FloatButton(JNIEnv* _env,jobject currActivity, std::function<void()
     lpClass = (jclass)env->NewGlobalRef(env->FindClass("android/view/WindowManager$LayoutParams"));
 
 
-    if (!btnClass) LOGI("ERR: No button class");
-    if (!ctxClass) LOGI("ERR: No context class");
+    if (!btnClass) LOGE("ERR: No button class");
+    if (!ctxClass) LOGE("ERR: No context class");
 
     LOGI("Fount button and context class");
 
@@ -20,7 +20,7 @@ FloatButton::FloatButton(JNIEnv* _env,jobject currActivity, std::function<void()
 
     if (!localBtn) 
     {
-        LOGI("localBtn is null!");
+        LOGE("localBtn is null!");
         return;
     }
 
@@ -88,12 +88,12 @@ FloatButton::FloatButton(JNIEnv* _env,jobject currActivity, std::function<void()
         } 
         else 
         {
-            LOGI("Failed to find initTouchListener method!");
+            LOGE("Failed to find initTouchListener method!");
         }
     } 
     else 
     {
-        LOGI("Failed to find FloatButtonHelper class! Check your classes2.dex");
+        LOGE("Failed to find FloatButtonHelper class! Check your classes2.dex");
     }
 }
 
@@ -118,7 +118,7 @@ FloatButton::~FloatButton()
     if (mParams) env->DeleteGlobalRef(mParams);
 }
 
-void FloatButton::OnTouch(int action, int rawX, int rawY)
+/*void FloatButton::OnTouch(int action, int rawX, int rawY)
 {
     jfieldID xField = env->GetFieldID(lpClass, "x", "I");
     jfieldID yField = env->GetFieldID(lpClass, "y", "I");
@@ -138,7 +138,6 @@ void FloatButton::OnTouch(int action, int rawX, int rawY)
             initialTouchX = rawX;
             initialTouchY = rawY;
             isMoving = false;
-            LOGI("Button GRABBED! Real hit!");
         }
         else 
         {
@@ -176,4 +175,4 @@ void FloatButton::OnTouch(int action, int rawX, int rawY)
     default:
         break;
     }
-}
+}*/

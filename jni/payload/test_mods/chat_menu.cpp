@@ -34,16 +34,10 @@ void* GetLocalPlayer()
     static void* myPlayer_field = IL2CPP::Resolver::FindField(main_klass, "myPlayer");
     static void* player_field = IL2CPP::Resolver::FindStaticField(main_klass, "player");
 
-    // if (!myPlayer_field || !player_field) 
-    // {
-    //     LOGI("ERR: Could not find Main fields! Fields: %p, %p", myPlayer_field, player_field);
-    //     return nullptr;
-    // }
-
     LOGI("Fields: %p, %p", myPlayer_field, player_field);
     void* static_data = IL2CPP::get_static_field_data(main_klass);
     
-    int myPlayerIdx = *(int*)((uintptr_t)static_data + 0x424); // wtf, why i can't allocate myPlayer field? but it static in the class..
+    int myPlayerIdx = *(int*)((uintptr_t)static_data + 0x424);
 
     void* playerArray = nullptr;
     IL2CPP::field_static_get_value(player_field, &playerArray);
@@ -120,6 +114,8 @@ void my_ProcessIncomingMessage(void* instance, void* chatMessage, int clientID)
                     }
                 }
             }
+
+            if (cmd.find("!modlist")) { /* will add soon */ }
         }
     }
 

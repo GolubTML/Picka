@@ -36,12 +36,16 @@ void ModLoader::closeLua()
 
 void ModLoader::loadAll()
 {
-    LOGI("Trying find mods in folder %s ...", modsPath.c_str());
+    LOGW("Trying find mods in folder %s ...", modsPath.c_str());
+    M_LOGW("Trying find mods in folder %s ...", modsPath.c_str());
 
     if (!std::filesystem::exists(modsPath))
     {
         LOGI("Cannot find folder, creating new one!");
+        M_LOGI("Cannot find folder, creating new one!");
+        
         std::filesystem::create_directories(modsPath);
+
         return;
     }
 
@@ -54,6 +58,8 @@ void ModLoader::loadAll()
             if (std::filesystem::exists(mainScript)) 
             {
                 LOGI("Found mod: %s", entry.path().filename().c_str());
+                M_LOGI("Found mod: %s", entry.path().filename().c_str()); // for 2 loggers
+
                 loadMain(mainScript);
             }
         }
@@ -63,6 +69,7 @@ void ModLoader::loadAll()
 void ModLoader::resetAll()
 {
     LOGI("Hot reload for mods!");
+    M_LOGI("Hot reload for mods!");
     initLua();
     loadAll();
 }
@@ -73,18 +80,24 @@ bool ModLoader::loadMain(const std::filesystem::path& scriptPath)
 
     std::string pathCommand = "package.path = package.path .. \";" + folderPath + "/?.lua;" + folderPath + "/?/init.lua\"";
     LOGI("Setting LUA path: %s", pathCommand.c_str());
+    M_LOGI("Setting LUA path: %s", pathCommand.c_str());
 
     if (luaL_dostring(L, pathCommand.c_str()) != LUA_OK) 
     {
-        LOGI("PATH ERROR: %s", lua_tostring(L, -1));
+        LOGE("PATH ERROR: %s", lua_tostring(L, -1));
+        M_LOGE("PATH ERROR: %s", lua_tostring(L, -1));
+        
         lua_pop(L, 1);
     }
 
     if (luaL_dofile(L, scriptPath.c_str()) != LUA_OK) 
     {
-        LOGI("LUA ERROR: %s", lua_tostring(L, -1));
+        LOGE("LUA ERROR: %s", lua_tostring(L, -1));
+        M_LOGE("LUA ERROR: %s", lua_tostring(L, -1));
+
         lua_pop(L, 1);
         return false;
     }
+    
     return true;
 }

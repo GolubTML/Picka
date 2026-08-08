@@ -17,8 +17,6 @@
 #include "SDK/LuaAPI/LuaBridge.h"
 #include "SDK/ModLoader.h"
 
-
-#include "test_mods/no_damage.h"
 #include "test_mods/chat_menu.h"
 #include <dlfcn.h>
 
@@ -26,6 +24,9 @@
 
 JavaVM* g_vm = nullptr;
 std::unique_ptr<ModLoader> modLoader;
+
+Logger internalLogger;
+Logger modLogger;
 
 extern "C" 
 {
@@ -35,7 +36,7 @@ extern "C"
         LOGI("JNI: Click started");
         if (Menu::instance == nullptr) 
         {
-            LOGI("ERR: Menu::instance is NULL!");
+            LOGE("ERR: Menu::instance is NULL!");
             return;
         }
         
@@ -46,18 +47,23 @@ extern "C"
 void RegisterNativeMethods(JNIEnv* env) 
 {
     jclass clazz = env->FindClass("com/picka/tools/FloatButtonHelper");
-    if (!clazz) {
-        LOGI("Native: Could not find FloatButtonHelper class for registration");
+    if (!clazz) 
+    {
+        LOGE("Native: Could not find FloatButtonHelper class for registration");
         return;
     }
 
-    JNINativeMethod methods[] = {
+    JNINativeMethod methods[] = 
+    {
         {(char*)"onClickNative", (char*)"()V", (void*)Java_com_picka_tools_FloatButtonHelper_onClickNative}
     };
 
-    if (env->RegisterNatives(clazz, methods, 1) < 0) {
-        LOGI("Native: RegisterNatives failed!");
-    } else {
+    if (env->RegisterNatives(clazz, methods, 1) < 0) 
+    {
+        LOGE("Native: RegisterNatives failed!");
+    } 
+    else 
+    {
         LOGI("Native: RegisterNatives SUCCESS!");
     }
 }
@@ -67,17 +73,10 @@ void InitAllMods()
     std::vector<HookTarget> hooks = 
     {
         { "Assembly-CSharp", "Terraria", "Main", "Update", 1, (void*)Menu::my_Update, (void**)&Menu::orig_Main_Update },
-       // { "Assembly-CSharp", "Terraria", "Player", "Hurt", -1, (void*)my_Player_Hurt, (void**)&original_Player_Hurt },
         { "Assembly-CSharp", "Terraria.Chat", "ChatCommandProcessor", "ProcessIncomingMessage", -1, (void*)my_ProcessIncomingMessage, (void**)&orig_ProcessIncomingMessage },
     };
     
     InstallDynamicHooks(hooks);
-}
-
-static int test_c_func(lua_State *L) 
-{
-    LOGI("LUA_DEBUG: HELLO FROM C FUNC!");
-    return 0;
 }
 
 typedef int (*il2cpp_init_fn)(const char* domain_name);
@@ -135,7 +134,7 @@ int my_il2cpp_init(const char* domain_name)
     } 
     else 
     {
-        LOGI("Could not find JNI_GetCreatedJavaVMs symbol!");
+        LOGE("Could not find JNI_GetCreatedJavaVMs symbol!");
     }
 
     modLoader = std::make_unique<ModLoader>("/sdcard/Mods/");
@@ -163,17 +162,17 @@ int my_il2cpp_init(const char* domain_name)
             } 
             else 
             {
-                LOGI("Failed to get currentActivity");
+                LOGE("Failed to get currentActivity");
             }
         } 
         else 
         {
-            LOGI("Failed to find UnityPlayer class");
+            LOGE("Failed to find UnityPlayer class");
         }
     }
     else 
     {
-        LOGI("Failed to get JNIEnv from JavaVM");
+        LOGE("Failed to get JNIEnv from JavaVM");
     }
     
     return result;
@@ -183,8 +182,14 @@ extern "C" __attribute__((visibility("default")))
 void payload_init()
 {
     __android_log_print(ANDROID_LOG_INFO, "Payload", "payload_init called!");
+
+    internalLogger.init("/sdcard/Mods/picka_internal.log");
+    modLogger.init("/sdcard/Mods/picka.log");
+
     setup_crash_handler();
-    LOGI("Payload API init!");
+
+    internalLogger.write(Level::Info, "Picka", "Picka API init!");
+    modLogger.write(Level::Info, "Mod", "Mod Logger init!");
 
     void* handle = dlopen("libil2cpp.so", RTLD_NOW);
     void* init_addr = dlsym(handle, "il2cpp_init");

@@ -23,10 +23,10 @@ ffi_type* get_ffi_type(uint8_t il2cpp_type_enum)
         case 0x08: return &ffi_type_sint32;
         case 0x0C: return &ffi_type_float;   // float and System.Single
         case 0x09: return &ffi_type_double;  // double
-        case 0x0e: // string
-        case 0x12: // class
-        case 0X1C: // object
-        case 0x0f: // ptr
+        case 0x0e:                           // string
+        case 0x12:                           // class
+        case 0X1C:                           // object
+        case 0x0f:                           // ptr
             return &ffi_type_pointer;       
         default: 
             return &ffi_type_pointer;
@@ -64,7 +64,7 @@ namespace LuaBridge
             lua_pop(L, 1);
         }
 
-        __android_log_print(ANDROID_LOG_INFO, "Payload", "%s", out.c_str());
+        M_LOGI("%s", out.c_str());
 
         return 0;
     }
@@ -266,7 +266,7 @@ namespace LuaBridge
 
         if (!instance) 
         {
-            LOGI("Cannot allocate instance!");
+            M_LOGE("Cannot allocate instance!");
             return 0;
         }
 
@@ -308,7 +308,7 @@ namespace LuaBridge
 
         if (!instance) 
         {
-            LOGI("Cannot allocate instance!");
+            M_LOGE("Cannot allocate instance!");
             return 0;
         }
 
@@ -317,7 +317,7 @@ namespace LuaBridge
 
         if (!fieldInfo)
         {
-            LOGI("Cannot find field! %s", fieldName);
+            M_LOGE("Cannot find field! %s", fieldName);
             lua_pushnil(L);
             return 1;
         }
@@ -364,7 +364,7 @@ namespace LuaBridge
         void* array = lua_touserdata(L, 1);
         if (!array)
         {
-            LOGI("Argument should be array!");
+            M_LOGE("Argument should be array!");
             lua_pushnil(L);
             return 0;
         }
@@ -380,7 +380,7 @@ namespace LuaBridge
 
         if (!array)
         {
-            LOGI("Argument should be array!");
+            M_LOGE("Argument should be array!");
             lua_pushnil(L);
             return 0;
         }
@@ -388,7 +388,7 @@ namespace LuaBridge
         uint32_t len = IL2CPP::array_length(array);
         if (index < 0 || index > (int)len)
         {
-            LOGI("Index out of array's length!");
+            M_LOGE("Index out of array's length!");
             lua_pushnil(L);
             return 0;
         }
@@ -614,7 +614,7 @@ namespace LuaBridge
             int callback = luaL_ref(L, LUA_REGISTRYINDEX);
             
             registeredHooks[slot].callbacks.push_back(callback);
-            LOGI("Hook updated: Mod added to chain in slot %d. Total mods: %zu", slot, registeredHooks[slot].callbacks.size());
+            M_LOGI("Hook updated: Mod added to chain in slot %d. Total mods: %zu", slot, registeredHooks[slot].callbacks.size());
 
             lua_pushboolean(L, true);
             return 1;
