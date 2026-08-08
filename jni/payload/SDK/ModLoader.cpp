@@ -2,6 +2,8 @@
 #include "LuaAPI/LuaHook.h"
 #include "LuaAPI/LuaBridge.h"
 #include "log.h"
+#include "libs/nlohmann/json.hpp"
+#include <istream>
 
 ModLoader::ModLoader(std::string path) : modsPath(path) 
 {
@@ -17,13 +19,15 @@ void ModLoader::initLua()
     L = luaL_newstate();
     luaL_openlibs(L);
     
-    LuaBridge::RegisterAPI(L);
+    LuaBridge::RegisterAPI(L, this);
 
     LOGI("Initilized Lua!");
 }
 
 void ModLoader::closeLua()
 {
+    loadedMods.clear();
+
     if (L)
     {
         LuaBridge::ClearAllHooks();
@@ -66,19 +70,66 @@ void ModLoader::loadAll()
     }
 }
 
+void ModLoader::loadModConfig(ModContext& mod)
+{
+    std::filesystem::path configPath = mod.folderPath / "config.json";
+
+    mod.name = mod.id;
+    mod.author = "Unknown";
+    mod.version = "1.0";
+
+    if (!std::filesystem::exists(configPath))
+    {
+        M_LOGW("No config.json for mod %s, using folder name as fallback", mod.id.c_str());
+        return;
+    }
+
+    std::ifstream file(configPath);
+    if (!file.is_open())
+    {
+        M_LOGE("Cannot open config.json file for mod %s", mod.id.c_str());
+        return;
+    }
+
+    try
+    {
+        nlohmann::json j;
+        file >> j;
+
+        mod.name = j.value("name", mod.id);
+        mod.author = j.value("author", std::string("Unknown"));
+        mod.version = j.value("version", std::string("1.0"));
+    }
+    catch (const nlohmann::json::exception e)
+    {
+        LOGE("Failed to parse config.json for mod %s: %s", mod.id.c_str(), e.what());
+    }
+}
+
 void ModLoader::resetAll()
 {
     LOGI("Hot reload for mods!");
     M_LOGI("Hot reload for mods!");
+
+    loadedMods.clear();
+
     initLua();
     loadAll();
 }
 
 bool ModLoader::loadMain(const std::filesystem::path& scriptPath)
 {
-    std::string folderPath = scriptPath.parent_path().string();
+    ModContext mod;
+    mod.id = scriptPath.parent_path().filename().string();
+    mod.folderPath = scriptPath.parent_path().string();
 
-    std::string pathCommand = "package.path = package.path .. \";" + folderPath + "/?.lua;" + folderPath + "/?/init.lua\"";
+    loadModConfig(mod);
+
+    LOGI("Loaded mod: id=%s name=%s version=%s", mod.id.c_str(), mod.name.c_str(), mod.version.c_str());
+    
+    loadedMods.push_back(mod);
+    
+    std::string pathCommand = "package.path = package.path .. \";" + mod.folderPath.string() + "/?.lua;" + mod.folderPath.string() + "/?/init.lua\"";
     LOGI("Setting LUA path: %s", pathCommand.c_str());
     M_LOGI("Setting LUA path: %s", pathCommand.c_str());
 
@@ -98,6 +149,6 @@ bool ModLoader::loadMain(const std::filesystem::path& scriptPath)
         lua_pop(L, 1);
         return false;
     }
-    
+
     return true;
 }

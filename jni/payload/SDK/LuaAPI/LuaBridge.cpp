@@ -3,11 +3,13 @@
 #include "../Il2Cpp/Il2CppAPI.h"
 #include "../Il2Cpp/Il2CppResolver.h"
 #include "../hook.h"
+#include "../ModLoader.h"
 #include "log.h"
+#include "libs/libffi/include/ffi.h"
+
 #include <android/log.h>
 #include <string>
 #include <map>
-#include "libs/libffi/include/ffi.h"
 
 #define MAX_HOOKS 256
 
@@ -36,7 +38,8 @@ ffi_type* get_ffi_type(uint8_t il2cpp_type_enum)
 namespace LuaBridge
 {
     lua_State* g_Lstate = nullptr;
-
+    
+    static ModLoader* g_ModLoader = nullptr;
     static std::map<uintptr_t, int> addrToSlot;
 
     template<std::size_t... Is>
@@ -49,6 +52,30 @@ namespace LuaBridge
     uintptr_t* proxy_addresses = proxy_array.data();
 
     int current_slot = 0;
+
+    static ModContext* resolveCallerMod(lua_State* L)
+    {
+        lua_Debug ar;
+
+        if (!lua_getstack(L, 1, &ar)) return nullptr;
+        lua_getinfo(L, "S", &ar);
+
+        std::string source = ar.source ? ar.source : "";
+        if (!source.empty() && source[0] == '@') source = source.substr(1);
+        if (source.empty()) return nullptr;
+
+        std::filesystem::path scriptPath = std::filesystem::weakly_canonical(source);
+
+        for (auto& mod : g_ModLoader->getAllMods())
+        {
+            auto rel = std::filesystem::relative(scriptPath, mod.folderPath);
+
+            if (!rel.empty() && rel.native().find("..", 0) != 0)
+                return &mod;
+        }
+
+        return nullptr;
+    }
 
     int log_print(lua_State* L)
     {
@@ -83,6 +110,53 @@ namespace LuaBridge
         {
             lua_pushnil(L);
         }
+
+        return 1;
+    }
+
+    // NEW API
+    int lua_getModName(lua_State* L)
+    {
+        ModContext* mod = resolveCallerMod(L);
+        if (!mod) lua_pushnil(L);
+        else lua_pushstring(L, mod->name.c_str());
+        return 1;
+    }
+
+    int lua_getModAuthor(lua_State* L)
+    {
+        ModContext* mod = resolveCallerMod(L);
+        if (!mod) lua_pushnil(L);
+        else lua_pushstring(L, mod->author.c_str());
+        return 1;
+    }
+
+    int lua_getModVersion(lua_State* L)
+    {
+        ModContext* mod = resolveCallerMod(L);
+        if (!mod) lua_pushnil(L);
+        else lua_pushstring(L, mod->version.c_str());
+        return 1;
+    }
+
+    int lua_getModInfo(lua_State* L)
+    {
+        ModContext* mod = resolveCallerMod(L);
+        if (!mod) lua_pushnil(L);
+
+        lua_newtable(L);
+
+        lua_pushstring(L, mod->id.c_str());
+        lua_setfield(L, -2, "id");
+
+        lua_pushstring(L, mod->name.c_str());
+        lua_setfield(L, -2, "name");
+
+        lua_pushstring(L, mod->author.c_str());
+        lua_setfield(L, -2, "author");
+
+        lua_pushstring(L, mod->version.c_str());
+        lua_setfield(L, -2, "version");
 
         return 1;
     }
@@ -654,9 +728,10 @@ namespace LuaBridge
         return 1;
     }
 
-    void RegisterAPI(lua_State* L)
+    void RegisterAPI(lua_State* L, ModLoader* modLoader)
     {
         g_Lstate = L;
+        g_ModLoader = modLoader;
 
         lua_newtable(L);
 
@@ -665,6 +740,15 @@ namespace LuaBridge
 
         lua_pushcfunction(L, lua_newString);
         lua_setfield(L, -2, "newString");
+
+        lua_pushcfunction(L, lua_getModName);
+        lua_setfield(L, -2, "getModName");
+        lua_pushcfunction(L, lua_getModAuthor);
+        lua_setfield(L, -2, "getModAuthor");
+        lua_pushcfunction(L, lua_getModVersion);
+        lua_setfield(L, -2, "getModVersion");
+        lua_pushcfunction(L, lua_getModInfo);
+        lua_setfield(L, -2, "getModInfo");
 
         lua_pushcfunction(L, lua_getMethodAddr);
         lua_setfield(L, -2, "getMethodAddr");

@@ -2,7 +2,18 @@
 
 #include <filesystem>
 #include <string>
+#include <vector>
 #include "libs/Lua54/lua.hpp"
+
+struct ModContext 
+{
+    std::string id; // id is just a folder name
+    std::string name;
+    std::string author;
+    std::string version;
+
+    std::filesystem::path folderPath;
+};
 
 class ModLoader
 {
@@ -14,14 +25,18 @@ private:
     void closeLua();
 
     bool loadMain(const std::filesystem::path& scriptPath);
-    void setupEnv(const std::string& modName); // for future
 
 public:
     ModLoader(std::string path);
     ~ModLoader();
 
     void loadAll();
+    void loadModConfig(ModContext& mod);
+    
     void resetAll();
+    
+    std::vector<ModContext> loadedMods;
 
     lua_State* getLua() { return L; }
+    std::vector<ModContext>& getAllMods() { return loadedMods; }
 };

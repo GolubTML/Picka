@@ -3,6 +3,8 @@
 #include "libs/Lua54/lua.hpp"
 #include "LuaHook.h"
 
+class ModLoader;
+
 namespace LuaBridge
 {
     extern lua_State* g_Lstate;
@@ -12,6 +14,8 @@ namespace LuaBridge
     static int log_print(lua_State* L);
     
     static int lua_newString(lua_State* L);
+
+    static int lua_getModName(lua_State* L);
 
     static int lua_getMethodAddr(lua_State* L);
     static int lua_getMethodInfo(lua_State* L); // the same as lua_getMethodAddr, but we get MethodInfo now
@@ -34,5 +38,5 @@ namespace LuaBridge
     static int lua_callMethod(lua_State* L); // like callNative, but takes MethodInfo. And, uses specific arguments type
     static int lua_hook(lua_State* L);
 
-    void RegisterAPI(lua_State* L);
+    void RegisterAPI(lua_State* L, ModLoader* modLoader);
 }
