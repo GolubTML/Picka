@@ -53,4 +53,14 @@ namespace LuaBridge::Helper
             lua_pop(L, 1);
         }
     }
+
+    uintptr_t luaToUintptr(lua_State* L, int idx)
+    {
+        if (lua_isboolean(L, idx)) return (uintptr_t)lua_toboolean(L, idx);
+        if (lua_isinteger(L, idx)) return (uintptr_t)lua_tointeger(L, idx);
+        if (lua_islightuserdata(L, idx)) return (uintptr_t)lua_touserdata(L, idx);
+        if (lua_isnumber(L, idx)) return (uintptr_t)lua_tonumber(L, idx);
+
+        return 0;
+    }
 } 

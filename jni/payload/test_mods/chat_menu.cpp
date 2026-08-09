@@ -3,7 +3,7 @@
 #include "../SDK/Il2Cpp/Il2CppResolver.h"
 #include "../SDK/SDK.h"
 #include "../log.h"
-#include "../SDK/LuaAPI/LuaBridge.h"
+#include "../SDK/LuaAPI/core/lua_mod.h"
 #include "../SDK/ModLoader.h"
 #include <string>
 
@@ -119,7 +119,7 @@ void my_ProcessIncomingMessage(void* instance, void* chatMessage, int clientID)
 
             if (cmd.find("!modlist") == 0) 
             { 
-                ModLoader* loader = LuaBridge::getModLoader();
+                ModLoader* loader = API::getModLoader();
                 if (!loader)
                 {
                     SDK::Chat("ModLoader not avaible!", {255, 0, 0});

@@ -23,6 +23,9 @@ LDFLAGS  := -shared -llog -landroid -ldl -static-libstdc++ -Wl,--export-dynamic
 
 all: $(BUILD_DIR) libpayload.so
 
+$(CPP_OBJS): | $(BUILD_DIR)
+$(LUA_OBJS): | $(BUILD_DIR)
+
 $(BUILD_DIR):
 	@mkdir -p $(sort $(dir $(CPP_OBJS) $(LUA_OBJS)))
 

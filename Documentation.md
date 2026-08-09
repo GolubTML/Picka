@@ -4,34 +4,34 @@ All mods for Picka written in Lua via specific API. Currently, Picka API only gi
 
 Picka API currently provides 16 methods., and here are list of it:
 1. [Log](#log):
-	`picka.log(str)`
+	- `picka.log(str)`
 2. [Il2Cpp Structures](#il2cpp-structures):
-	`picka.newString(str)`
+	- `picka.newString(str)`
 3. [Classes](#classes):
-	`picka.getClass(assemblies, namespace, className)`
-	`picka.getStaticField(class, fieldName)`
-	`picka.setStaticField(class, fieldName, value)`
-	`picka.getField(instance, fieldName)`
-	`picka.setField(instance, fieldName, value)`
+	- `picka.getClass(assemblies, namespace, className)`
+	- `picka.getStaticField(class, fieldName)`
+	- `picka.setStaticField(class, fieldName, value)`
+	- `picka.getField(instance, fieldName)`
+	- `picka.setField(instance, fieldName, value)`
 4. [Methods](#methods):
 	Following methods will have overloads:
-	Method Address:
-		1.`picka.getMethodAddr(assemblies, namespace, className, methodName, args)`
-		2.`picka.getMethodAddr(class, methodName, args)`
-	MethodInfo:
-		1.`picka.getMethodInfo(assemblies, namespace, className, methodName, args)`
-		2.`picka.getMethodInfo(class, methodName, args)`
-	Method calling and hooking:
-		(callNative and callMethod have big differens, later on, i will show it)
-		`picka.callNative(methodPointer, args)`
-		`picka.callMethod(methodPointer, args)`
-		`picka.hook(methodPtr, args, func)`
+	- Method Address:
+      - 1.`picka.getMethodAddr(assemblies, namespace, className, methodName, args)`
+      - 2.`picka.getMethodAddr(class, methodName, args)`
+	- MethodInfo:
+	  - 1.`picka.getMethodInfo(assemblies, namespace, className, methodName, args)`
+	  - 2.`picka.getMethodInfo(class, methodName, args)`
+	- Method calling and hooking:
+	  - (callNative and callMethod have big differens, later on, i will show it)
+	  - `picka.callNative(methodPointer, args)`
+	  - `picka.callMethod(methodPointer, args)`
+	  - `picka.hook(methodPtr, args, func)`
 5. [Arrays](#arrays):
-	`picka.getArrayLength(array)`
-	`picka.getArrayElement(array, index)`
+	- `picka.getArrayLength(array)`
+	- `picka.getArrayElement(array, index)`
 6. [Memory manipulation](#memory-manipulation):
-	`picka.readFloat(instance, fieldOffset)`
-	`picka.getFieldOffset(instance, fieldName)`
+	- `picka.readFloat(instance, fieldOffset)`
+	- `picka.getFieldOffset(instance, fieldName)`
 
 Also, you might want to see useful examples of mods. Click here -> [Some more information](#some-more-information)
 
