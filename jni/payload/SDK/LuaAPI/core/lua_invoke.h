@@ -1,6 +1,12 @@
 #pragma once
 
 #include "libs/Lua54/lua.hpp"
+#include "../../Il2Cpp/Il2CppStructs.h"
+
+namespace Invoke
+{
+    uintptr_t CallMethod(lua_State* L, IL2CPP::MethodInfo* methodInfo, int argsBase);
+}
 
 namespace API
 {

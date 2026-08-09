@@ -4,6 +4,43 @@
 #include "../LuaHelper.h"
 #include "../../../log.h"
 
+namespace Reflections
+{
+    IL2CPP::MethodInfo* FindMethod(IL2CPP::Il2CppClass* klass, const char* name, int argc)
+    {
+        if (!klass || !name) return nullptr;
+        return IL2CPP::class_get_method_from_name(klass, name, argc);
+    }
+
+    void* FindField(IL2CPP::Il2CppClass* klass, const char* fieldName, bool isStatic)
+    {
+        if (!klass || !fieldName) return nullptr;
+        return isStatic ? IL2CPP::Resolver::FindStaticField(klass, fieldName) : IL2CPP::Resolver::FindField(klass, fieldName);
+    }
+
+    uintptr_t GetFieldValue(void* instance, void* fieldInfo, bool isStatic)
+    {
+        if (!fieldInfo) return 0;
+
+        uintptr_t value = 0;
+        if (isStatic)
+            IL2CPP::field_static_get_value(fieldInfo, &value);
+        else
+            IL2CPP::field_get_value(instance, fieldInfo, &value);
+
+        return value;
+    }
+    void SetFieldValue(void* instance, void* fieldInfo, uintptr_t value, bool isStatic)
+    {
+        if (!fieldInfo) return;
+
+        if (isStatic)
+            IL2CPP::field_static_set_value(fieldInfo, &value);
+        else
+            IL2CPP::field_set_value(instance, fieldInfo, &value);
+    }
+}
+
 namespace API
 {
     int lua_getMethodAddr(lua_State* L)
@@ -15,9 +52,9 @@ namespace API
             // if we want write picka.getMethodPtr(klass, methodName, argsCount)
             IL2CPP::Il2CppClass* klass = (IL2CPP::Il2CppClass*)lua_touserdata(L, 1);
             const char* methodName = luaL_checkstring(L, 2);
-            int args = luaL_checkinteger(L, 3);
+            int argc = luaL_checkinteger(L, 3);
 
-            methodInfo = IL2CPP::class_get_method_from_name(klass, methodName, args);
+            methodInfo = Reflections::FindMethod(klass, methodName, argc);
         }
         else
         {
@@ -25,9 +62,9 @@ namespace API
             const char* namezpace = luaL_checkstring(L, 2);
             const char* klass = luaL_checkstring(L, 3);
             const char* method = luaL_checkstring(L, 4);
-            int args = luaL_checkinteger(L, 5);
+            int argc = luaL_checkinteger(L, 5);
 
-            methodInfo = IL2CPP::Resolver::FindMethod(assembly, namezpace, klass, method, args);
+            methodInfo = IL2CPP::Resolver::FindMethod(assembly, namezpace, klass, method, argc);
         }
 
         if (methodInfo)
@@ -51,9 +88,9 @@ namespace API
         {
             IL2CPP::Il2CppClass* klass = (IL2CPP::Il2CppClass*)lua_touserdata(L, 1);
             const char* methodName = luaL_checkstring(L, 2);
-            int args = luaL_checkinteger(L, 3);
+            int argc = luaL_checkinteger(L, 3);
 
-            methodInfo = IL2CPP::class_get_method_from_name(klass, methodName, args);
+            methodInfo = Reflections::FindMethod(klass, methodName, argc);
         }
         else
         {
@@ -61,9 +98,9 @@ namespace API
             const char* namezpace = luaL_checkstring(L, 2);
             const char* klass = luaL_checkstring(L, 3);
             const char* method = luaL_checkstring(L, 4);
-            int args = luaL_checkinteger(L, 5);
+            int argc = luaL_checkinteger(L, 5);
 
-            methodInfo = IL2CPP::Resolver::FindMethod(assembly, namezpace, klass, method, args);
+            methodInfo = IL2CPP::Resolver::FindMethod(assembly, namezpace, klass, method, argc);
         }
 
         if (methodInfo)
@@ -115,7 +152,7 @@ namespace API
 
         if (!klass) return 0;
 
-        void* fieldInfo = IL2CPP::class_get_field_from_name(klass, fieldName);
+        void* fieldInfo = Reflections::FindField(klass, fieldName, true);
         if (!fieldInfo)
         {
             // LOGI("Field not found! %s", fieldName);
@@ -123,14 +160,8 @@ namespace API
             return 1;
         }
 
-        uintptr_t value = 0;
-        IL2CPP::field_static_get_value(fieldInfo, &value);
-
-        // For test
-        if (value > 0xFFFFFFFF)
-            lua_pushlightuserdata(L, (void*)value);
-        else
-            lua_pushinteger(L, value);
+        uintptr_t value = Reflections::GetFieldValue(nullptr, fieldInfo, true);
+        LuaBridge::Helper::luaPushUintptr(L, value);
 
         return 1;
     }
@@ -141,12 +172,11 @@ namespace API
         IL2CPP::Il2CppClass* klass = (IL2CPP::Il2CppClass*)lua_touserdata(L, 1);
         const char* fieldName = luaL_checkstring(L, 2);
 
-        void* fieldInfo = IL2CPP::class_get_field_from_name(klass, fieldName);
+        void* fieldInfo = Reflections::FindField(klass, fieldName, true);
         if (!fieldInfo) return luaL_error(L, "Field not found!");
 
         uintptr_t value = LuaBridge::Helper::luaToUintptr(L, 3);
-
-        IL2CPP::field_static_set_value(fieldInfo, &value);
+        Reflections::SetFieldValue(nullptr, fieldInfo, value, true);
 
         return 0;
     }
@@ -173,7 +203,7 @@ namespace API
         }
 
         IL2CPP::Il2CppClass* klass = IL2CPP::object_get_class(instance);
-        void* fieldInfo = IL2CPP::Resolver::FindField(klass, fieldName);
+        void* fieldInfo = Reflections::FindField(klass, fieldName, false);
 
         if (!fieldInfo)
         {
@@ -182,13 +212,8 @@ namespace API
             return 1;
         }
 
-        uintptr_t value = 0;
-        IL2CPP::field_get_value(instance, fieldInfo, &value);
-
-        if (value > 0xFFFFFFFF)
-            lua_pushlightuserdata(L, (void*)value);
-        else
-            lua_pushinteger(L, value);
+        uintptr_t value = Reflections::GetFieldValue(instance, fieldInfo, false);
+        LuaBridge::Helper::luaPushUintptr(L, value);
 
         return 1;
     }
@@ -215,7 +240,7 @@ namespace API
         }
 
         IL2CPP::Il2CppClass* klass = IL2CPP::object_get_class(instance);
-        void* fieldInfo = IL2CPP::class_get_field_from_name(klass, fieldName);
+        void* fieldInfo = Reflections::FindField(klass, fieldName, false);
 
         if (!fieldInfo)
         {
@@ -225,8 +250,7 @@ namespace API
         }
 
         uintptr_t value = LuaBridge::Helper::luaToUintptr(L, 3);
-
-        IL2CPP::field_set_value(instance, fieldInfo, &value);
+        Reflections::SetFieldValue(instance, fieldInfo, value, false);
 
         return 0;
     }

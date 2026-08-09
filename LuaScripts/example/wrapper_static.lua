@@ -62,7 +62,7 @@ end
 -- so, let's test it, for example, on Main.dayTime
 -- so, here we get wrapped class of Terraria.Main, and now, we can get fields
 local Main = wrapClass("Terraria", "Main")
-
+ 
 -- let's print into adb logcat, valur of Main.dayTime
 picka.log(Main.dayTime) -- and here, called __index
 

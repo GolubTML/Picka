@@ -6,6 +6,7 @@
 #include "core/lua_memory.h"
 #include "core/lua_invoke.h"
 #include "core/lua_hook.h"
+#include "core/lua_wrap.h"
 
 namespace LuaBridge
 {
@@ -24,6 +25,7 @@ namespace LuaBridge
         API::RegisterMemory(L);
         API::RegisterInvoker(L);
         API::RegisterHook(L);
+        API::RegisterWrappers(L);
 
         lua_setglobal(L, "picka");
         luaL_dostring(L, "print = picka.log");

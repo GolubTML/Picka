@@ -6,30 +6,142 @@
 
 #include "../LuaHelper.h"
 
+static ffi_type* get_ffi_type(uint8_t il2cpp_type_enum) 
+{
+    // LOGI("Mapping IL2CPP type 0x%02X", il2cpp_type_enum);
+
+    switch (il2cpp_type_enum) 
+    {
+        case 0x01: return &ffi_type_void;    // void
+        case 0x02: return &ffi_type_uint8;   // bool
+        case 0x03: return &ffi_type_sint32;  // int
+        case 0x08: return &ffi_type_sint32;
+        case 0x0C: return &ffi_type_float;   // float and System.Single
+        case 0x09: return &ffi_type_double;  // double
+        case 0x0e:                           // string
+        case 0x12:                           // class
+        case 0X1C:                           // object
+        case 0x0f:                           // ptr
+            return &ffi_type_pointer;       
+        default: 
+            return &ffi_type_pointer;
+    }
+}
+
+namespace Invoke
+{
+    uintptr_t CallMethod(lua_State* L, IL2CPP::MethodInfo* methodInfo, int argsBase)
+    {
+        if (!methodInfo) return 0; 
+
+        bool is_static = (methodInfo->flags & 0x0010);
+        int lua_args_count = lua_gettop(L) - argsBase + 1;
+
+        ffi_cif cif;
+        ffi_type* arg_types[32];
+        void* arg_values[32];
+
+        union ArgStorage
+        {
+            uintptr_t p;
+            float f;
+            int32_t i;
+        } storage[32];
+
+        for (int i = 0; i < lua_args_count; i++) 
+        {
+            int lua_idx = argsBase + i; 
+            
+            if (!is_static && i == 0) 
+            {
+                storage[i].p = (uintptr_t)lua_touserdata(L, lua_idx);
+                arg_types[i] = &ffi_type_pointer;
+            } 
+            else 
+            {
+                int param_idx = is_static ? i : i - 1;
+                // auto* param = methodInfo->parameters[param_idx];
+                
+                const IL2CPP::Il2CppType* typeStruct = IL2CPP::method_get_param(methodInfo, param_idx);
+                /* uintptr_t addr = (uintptr_t)typeStruct;
+                LOGI("Param %d hex dump: %02X %02X %02X %02X %02X %02X %02X %02X | %02X %02X %02X %02X", 
+                    param_idx,
+                    *(uint8_t*)(addr), *(uint8_t*)(addr+1), *(uint8_t*)(addr+2), *(uint8_t*)(addr+3),
+                    *(uint8_t*)(addr+4), *(uint8_t*)(addr+5), *(uint8_t*)(addr+6), *(uint8_t*)(addr+7),
+                    *(uint8_t*)(addr+8), *(uint8_t*)(addr+9), *(uint8_t*)(addr+10), *(uint8_t*)(addr+11)); 
+                    
+                    LOGI("Method: %s, ParamIdx: %d, TypePtr: %p", methodInfo->name, param_idx, typeStruct);
+                */
+                
+                if (lua_istable(L, lua_idx)) 
+                {
+                    IL2CPP::Il2CppClass* structClass = IL2CPP::class_from_type(typeStruct);
+                    uint32_t align = 0;
+                    int size = IL2CPP::class_value_size(structClass, &align);
+                    
+                    void* structBuffer = alloca(size);
+                    LuaBridge::Helper::fillStructFromTable(L, lua_idx, structClass, structBuffer);
+
+                    if (size <= 8) 
+                    {
+                        storage[i].p = 0; 
+                        memcpy(&storage[i].p, structBuffer, size);
+                        
+                        arg_types[i] = &ffi_type_uint64;
+                        arg_values[i] = &storage[i].p;
+                    } 
+                    else 
+                    {
+                        arg_values[i] = structBuffer;
+                        arg_types[i] = &ffi_type_pointer;
+                    }
+                    continue; 
+                }
+
+                uint8_t raw_type = IL2CPP::type_get_type(typeStruct);
+
+                ffi_type* f_type = get_ffi_type(raw_type);
+                arg_types[i] = f_type;
+
+
+                if (f_type == &ffi_type_float) 
+                {
+                    storage[i].f = (float)lua_tonumber(L, lua_idx);
+                } 
+                else if (f_type == &ffi_type_sint32 || f_type == &ffi_type_uint8) // Добавь проверку на байт
+                {
+                    storage[i].i = (int32_t)lua_tointeger(L, lua_idx);
+                } 
+                else if (lua_isnumber(L, lua_idx))
+                {
+                    storage[i].p = (uintptr_t)lua_tointeger(L, lua_idx); 
+                }
+                else if (lua_isnil(L, lua_idx)) 
+                {
+                    storage[i].p = 0;
+                }
+                else 
+                {
+                    storage[i].p = (uintptr_t)lua_touserdata(L, lua_idx);
+                }
+            }
+
+            arg_values[i] = &storage[i];
+        }
+
+        uintptr_t result = 0;
+        uint8_t ret_raw_type = (uint8_t)(methodInfo->return_type->bits & 0xFF);
+        ffi_type* f_ret_type = get_ffi_type(ret_raw_type);
+
+        if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, lua_args_count, f_ret_type, arg_types) == FFI_OK)
+            ffi_call(&cif, FFI_FN(methodInfo->methodPointer), &result, arg_values);
+
+        return result;
+    }
+}
+
 namespace API
 {
-    static ffi_type* get_ffi_type(uint8_t il2cpp_type_enum) 
-    {
-        // LOGI("Mapping IL2CPP type 0x%02X", il2cpp_type_enum);
-
-        switch (il2cpp_type_enum) 
-        {
-            case 0x01: return &ffi_type_void;    // void
-            case 0x02: return &ffi_type_uint8;   // bool
-            case 0x03: return &ffi_type_sint32;  // int
-            case 0x08: return &ffi_type_sint32;
-            case 0x0C: return &ffi_type_float;   // float and System.Single
-            case 0x09: return &ffi_type_double;  // double
-            case 0x0e:                           // string
-            case 0x12:                           // class
-            case 0X1C:                           // object
-            case 0x0f:                           // ptr
-                return &ffi_type_pointer;       
-            default: 
-                return &ffi_type_pointer;
-        }
-    }
-
     int lua_callNative(lua_State* L)
     {
         int n = lua_gettop(L);
@@ -91,108 +203,9 @@ namespace API
     int lua_callMethod(lua_State* L)
     {
         IL2CPP::MethodInfo* methodInfo = (IL2CPP::MethodInfo*)lua_touserdata(L, 1);
-        if (!methodInfo) return 0; 
+        if (!methodInfo) return 0;
 
-        bool is_static = (methodInfo->flags & 0x0010);
-        int lua_args_count = lua_gettop(L) - 1;
-
-        ffi_cif cif;
-        ffi_type* arg_types[32];
-        void* arg_values[32];
-
-        union ArgStorage
-        {
-            uintptr_t p;
-            float f;
-            int32_t i;
-        } storage[32];
-
-        for (int i = 0; i < lua_args_count; i++) 
-        {
-            int lua_idx = i + 2; 
-            
-            if (!is_static && i == 0) 
-            {
-                storage[i].p = (uintptr_t)lua_touserdata(L, lua_idx);
-                arg_types[i] = &ffi_type_pointer;
-            } 
-            else 
-            {
-                int param_idx = is_static ? i : i - 1;
-                auto* param = methodInfo->parameters[param_idx];
-                
-                const IL2CPP::Il2CppType* typeStruct = IL2CPP::method_get_param(methodInfo, param_idx);
-                /* uintptr_t addr = (uintptr_t)typeStruct;
-                LOGI("Param %d hex dump: %02X %02X %02X %02X %02X %02X %02X %02X | %02X %02X %02X %02X", 
-                    param_idx,
-                    *(uint8_t*)(addr), *(uint8_t*)(addr+1), *(uint8_t*)(addr+2), *(uint8_t*)(addr+3),
-                    *(uint8_t*)(addr+4), *(uint8_t*)(addr+5), *(uint8_t*)(addr+6), *(uint8_t*)(addr+7),
-                    *(uint8_t*)(addr+8), *(uint8_t*)(addr+9), *(uint8_t*)(addr+10), *(uint8_t*)(addr+11)); */
-                // LOGI("Method: %s, ParamIdx: %d, TypePtr: %p", methodInfo->name, param_idx, typeStruct);
-                
-                if (lua_istable(L, lua_idx)) 
-                {
-                    IL2CPP::Il2CppClass* structClass = IL2CPP::class_from_type(typeStruct);
-                    uint32_t align = 0;
-                    int size = IL2CPP::class_value_size(structClass, &align);
-                    
-                    void* structBuffer = alloca(size);
-                    LuaBridge::Helper::fillStructFromTable(L, lua_idx, structClass, structBuffer);
-
-                    if (size <= 8) 
-                    {
-                        storage[i].p = 0; 
-                        memcpy(&storage[i].p, structBuffer, size);
-                        
-                        arg_types[i] = &ffi_type_uint64;
-                        arg_values[i] = &storage[i].p;
-                    } 
-                    else 
-                    {
-                        arg_values[i] = structBuffer;
-                        arg_types[i] = &ffi_type_pointer;
-                    }
-                    continue; 
-                }
-
-                uint8_t raw_type = IL2CPP::type_get_type(typeStruct);
-
-                ffi_type* f_type = get_ffi_type(raw_type);
-                arg_types[i] = f_type;
-
-
-                if (f_type == &ffi_type_float) 
-                {
-                    storage[i].f = (float)lua_tonumber(L, lua_idx);
-                } 
-                else if (f_type == &ffi_type_sint32 || f_type == &ffi_type_uint8) // Добавь проверку на байт
-                {
-                    storage[i].i = (int32_t)lua_tointeger(L, lua_idx);
-                } 
-                else if (lua_isnumber(L, lua_idx))
-                {
-                    storage[i].p = (uintptr_t)lua_tointeger(L, lua_idx); 
-                }
-                else if (lua_isnil(L, lua_idx)) 
-                {
-                    storage[i].p = 0;
-                }
-                else 
-                {
-                    storage[i].p = (uintptr_t)lua_touserdata(L, lua_idx);
-                }
-            }
-
-            arg_values[i] = &storage[i];
-        }
-
-        uintptr_t result = 0;
-
-        uint8_t ret_raw_type = (uint8_t)(methodInfo->return_type->bits & 0xFF);
-        ffi_type* f_ret_type = get_ffi_type(ret_raw_type);
-
-        if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, lua_args_count, f_ret_type, arg_types) == FFI_OK)
-            ffi_call(&cif, FFI_FN(methodInfo->methodPointer), &result, arg_values);
+        uintptr_t result = Invoke::CallMethod(L, methodInfo, 2);
 
         lua_pushinteger(L, (lua_Integer)result);
 

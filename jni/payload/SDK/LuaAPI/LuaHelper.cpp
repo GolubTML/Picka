@@ -63,4 +63,12 @@ namespace LuaBridge::Helper
 
         return 0;
     }
+
+    void luaPushUintptr(lua_State* L, uintptr_t value)
+    {
+        if (value > 0xFFFFFFFF)
+            lua_pushlightuserdata(L, (void*)value);
+        else
+            lua_pushinteger(L, (lua_Integer)value);
+    }
 } 

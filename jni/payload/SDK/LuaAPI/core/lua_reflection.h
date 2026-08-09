@@ -1,6 +1,18 @@
 #pragma once
 
 #include "libs/Lua54/lua.hpp"
+#include "../../Il2Cpp/Il2CppStructs.h"
+
+// here will be all methods, which we will use not only here
+namespace Reflections
+{
+    IL2CPP::MethodInfo* FindMethod(IL2CPP::Il2CppClass* klass, const char* name, int argc);
+
+    void* FindField(IL2CPP::Il2CppClass* klass, const char* fieldName, bool isStatic);
+
+    uintptr_t GetFieldValue(void* instance, void* fieldInfo, bool isStatic);
+    void SetFieldValue(void* instance, void* fieldInfo, uintptr_t value, bool isStatic);
+}
 
 namespace API
 {

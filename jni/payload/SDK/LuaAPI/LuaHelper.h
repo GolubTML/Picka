@@ -9,4 +9,5 @@ namespace LuaBridge::Helper
     void fillStructFromTable(lua_State* L, int tableIdx, IL2CPP::Il2CppClass* klass, void* buffer);
 
     uintptr_t luaToUintptr(lua_State* L, int idx);
+    void luaPushUintptr(lua_State* L, uintptr_t value);
 }
