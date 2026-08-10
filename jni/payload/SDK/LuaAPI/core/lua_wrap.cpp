@@ -13,6 +13,7 @@ namespace API
 {
     static const char* CLASS_WRAPPER_META = "picka.ClassWrapper";
     static const char* METHOD_HANDLE_META = "picka.MethodHandle";
+    static const char* STRUCT_WRAPPER_META = "picka.StructWrapper";
 
     std::unordered_map<IL2CPP::Il2CppClass*, std::unordered_map<std::string, IL2CPP::MethodInfo*>> g_MethodCache;
     std::unordered_map<IL2CPP::Il2CppClass*, std::unordered_map<std::string, void*>> g_FieldCache;
@@ -155,6 +156,56 @@ namespace API
         return 1;
     }
 
+    struct StructWrapper
+    {
+        void* base;
+        IL2CPP::Il2CppClass* klass;
+    };
+
+    void PushStructWrapper(lua_State* L, void* base, IL2CPP::Il2CppClass* klass)
+    {
+        StructWrapper* s = (StructWrapper*)lua_newuserdata(L, sizeof(StructWrapper));
+        s->base = base;
+        s->klass = klass;
+
+        luaL_getmetatable(L, STRUCT_WRAPPER_META);
+        lua_setmetatable(L, -2);    
+    }
+
+    int structWrapper_index(lua_State* L)
+    {
+        StructWrapper* s = (StructWrapper*)luaL_checkudata(L, 1, STRUCT_WRAPPER_META);
+        const char* key = luaL_checkstring(L, 2);
+        
+        void* fieldInfo = cacheFieldInfo(s->klass, key, false);
+        if (!fieldInfo) return luaL_error(L, "Struct field '%s' not found", key);
+
+        size_t offset = IL2CPP::field_get_offset(fieldInfo);
+        void* addr = (char*)s->base + offset;
+        
+        const IL2CPP::Il2CppType* fieldType = IL2CPP::field_get_type(fieldInfo);
+        IL2CPP::Il2CppClass* fieldClass = IL2CPP::class_from_type(fieldType);
+
+        Reflections::PushTypedValue(L, addr, fieldType, fieldClass);
+        return 1;
+    }
+    int structWrapper_newindex(lua_State* L)
+    {
+        StructWrapper* s = (StructWrapper*)luaL_checkudata(L, 1, STRUCT_WRAPPER_META);
+        const char* key = luaL_checkstring(L, 2);
+        
+        void* fieldInfo = cacheFieldInfo(s->klass, key, false);
+        if (!fieldInfo) return luaL_error(L, "Struct field '%s' not found", key);
+
+        size_t offset = IL2CPP::field_get_offset(fieldInfo);
+        void* addr = (char*)s->base + offset;
+        
+        const IL2CPP::Il2CppType* fieldType = IL2CPP::field_get_type(fieldInfo);
+
+        LuaBridge::Helper::setTypedValue(L, 3, addr, fieldType);
+        return 0;
+    }
+
     struct ClassWrapper
     {
         IL2CPP::Il2CppClass* klass;
@@ -197,9 +248,22 @@ namespace API
         void* fieldInfo = cacheFieldInfo(klass, fieldName, isStatic);
         if (fieldInfo)
         {
-            uintptr_t value = Reflections::GetFieldValue(w->instance, fieldInfo, isStatic);
-            LuaBridge::Helper::luaPushUintptr(L, value);
+            const IL2CPP::Il2CppType* fieldType = IL2CPP::field_get_type(fieldInfo);
+            IL2CPP::Il2CppClass* fieldClass = IL2CPP::class_from_type(fieldType);
+            size_t offset = IL2CPP::field_get_offset(fieldInfo);
 
+            void* addr;
+            if (isStatic)
+            {
+                void* staticData = IL2CPP::class_get_static_field_data(klass);
+                addr = (char*)staticData + offset;
+            }
+            else
+            {
+                addr = (char*)w->instance + offset;
+            }
+
+            Reflections::PushTypedValue(L, addr, fieldType, fieldClass);
             return 1;
         }
 
@@ -231,9 +295,22 @@ namespace API
         if (!fieldInfo)
             return luaL_error(L, "Field %s not found!", fieldName);
 
-        uintptr_t value = LuaBridge::Helper::luaToUintptr(L, 3);
-        Reflections::SetFieldValue(w->instance, fieldInfo, value, isStatic);
+        const IL2CPP::Il2CppType* fieldType = IL2CPP::field_get_type(fieldInfo);
+        IL2CPP::Il2CppClass* fieldClass = IL2CPP::class_from_type(fieldType);
+        size_t offset = IL2CPP::field_get_offset(fieldInfo);
 
+        void* addr;
+        if (isStatic)
+        {
+            void* staticData = IL2CPP::class_get_static_field_data(klass);
+            addr = (char*)staticData + offset;
+        }
+        else
+        {
+            addr = (char*)w->instance + offset;
+        }
+            
+        LuaBridge::Helper::setTypedValue(L, 3, addr, fieldType);
         return 0;
     }
 
@@ -305,6 +382,13 @@ namespace API
         lua_setfield(L, -2, "__index");
         lua_pushcfunction(L, methodHandle_gc);
         lua_setfield(L, -2, "__gc");
+        lua_pop(L, 1);
+
+        luaL_newmetatable(L, STRUCT_WRAPPER_META);
+        lua_pushcfunction(L, structWrapper_index);
+        lua_setfield(L, -2, "__index");
+        lua_pushcfunction(L, structWrapper_newindex);
+        lua_setfield(L, -2, "__newindex");
         lua_pop(L, 1);
 
         lua_pushcfunction(L, lua_pickaClass);

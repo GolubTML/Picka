@@ -12,6 +12,8 @@ namespace Reflections
 
     uintptr_t GetFieldValue(void* instance, void* fieldInfo, bool isStatic);
     void SetFieldValue(void* instance, void* fieldInfo, uintptr_t value, bool isStatic);
+
+    void PushTypedValue(lua_State* L, void* addr, const IL2CPP::Il2CppType* fieldType, IL2CPP::Il2CppClass* fieldClassIfStruct);
 }
 
 namespace API

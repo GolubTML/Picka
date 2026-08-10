@@ -5,7 +5,7 @@
 
 namespace LuaBridge::Helper
 {
-    // in future will be more functions
+    void setTypedValue(lua_State* L,  int luaValueIdx, void* addr, const IL2CPP::Il2CppType* fieldType);
     void fillStructFromTable(lua_State* L, int tableIdx, IL2CPP::Il2CppClass* klass, void* buffer);
 
     uintptr_t luaToUintptr(lua_State* L, int idx);

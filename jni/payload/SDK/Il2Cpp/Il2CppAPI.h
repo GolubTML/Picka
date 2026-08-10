@@ -18,6 +18,7 @@ namespace IL2CPP
     REGISTER_IL2CPP_METHOD(int32_t, class_value_size, (void* klass, uint32_t* align));
     REGISTER_IL2CPP_METHOD(void*, class_get_fields, (void* klass, void** iter));
     REGISTER_IL2CPP_METHOD(Il2CppClass*, object_get_class, (void* instance));
+    REGISTER_IL2CPP_METHOD(bool, class_is_valuetype, (const Il2CppClass* klass));
 
     // Method
     REGISTER_IL2CPP_METHOD(const Il2CppType*, method_get_param, (const MethodInfo* method, uint32_t index));
@@ -25,6 +26,7 @@ namespace IL2CPP
     // Fields
     REGISTER_IL2CPP_METHOD(const char*, field_get_name, (void* field));
     REGISTER_IL2CPP_METHOD(void*, get_static_field_data, (void* klass));
+    REGISTER_IL2CPP_METHOD(void*, class_get_static_field_data, (const Il2CppClass* klass));
     REGISTER_IL2CPP_METHOD(size_t, field_get_offset, (void* field));
     REGISTER_IL2CPP_METHOD(void*, class_get_parent, (void* klass));
 

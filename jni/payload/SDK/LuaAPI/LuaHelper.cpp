@@ -4,6 +4,34 @@
 
 namespace LuaBridge::Helper
 {
+    void setTypedValue(lua_State* L,  int luaValueIdx, void* addr, const IL2CPP::Il2CppType* fieldType)
+    {
+        uint8_t type_enum = IL2CPP::type_get_type(fieldType);
+
+        switch (type_enum)
+        {
+        case 0x02:
+            *(bool*)addr = lua_toboolean(L, luaValueIdx);
+            return;
+
+        case 0x0C:
+            *(float*)addr = lua_tonumber(L, luaValueIdx);
+            return;
+
+        case 0x03: case 0x08:
+            *(int32_t*)addr = lua_tointeger(L, luaValueIdx);
+            return;
+
+        case 0x05:
+            *(int*)addr = lua_tointeger(L, luaValueIdx);
+            return;
+        
+        default:
+            *(uintptr_t*)addr = luaToUintptr(L, luaValueIdx);
+            return;
+        }
+    }
+
     void fillStructFromTable(lua_State* L, int tableIdx, IL2CPP::Il2CppClass* klass, void* buffer)
     {
         memset(buffer, 0, IL2CPP::class_value_size(klass, nullptr));
@@ -25,29 +53,7 @@ namespace LuaBridge::Helper
                 }
 
                 const IL2CPP::Il2CppType* fType = IL2CPP::field_get_type(field);
-                uint8_t type_enum = IL2CPP::type_get_type(fType);
-
-                if (type_enum == 0x02) 
-                {
-                    bool val = lua_toboolean(L, -1);
-                    *(bool*)((char*)buffer + offset) = val;
-                }
-                else if (type_enum == 0x0C) 
-                {
-                    float val = (float)lua_tonumber(L, -1);
-                    *(float*)((char*)buffer + offset) = val;
-                }
-                else if (type_enum == 0x03 || type_enum == 0x08 || type_enum == 0x05) 
-                { 
-                    int32_t val = (int32_t)lua_tointeger(L, -1);
-                    if (type_enum == 0x05) *(uint8_t*)((char*)buffer + offset) = (uint8_t)val; // BYTE
-                    else *(int32_t*)((char*)buffer + offset) = val;
-                }
-                else 
-                {
-                    uintptr_t val = (uintptr_t)lua_tonumber(L, -1);
-                    *(uintptr_t*)((char*)buffer + offset) = val;
-                }
+                setTypedValue(L, -1, (char*)buffer + offset, fType);
             }
 
             lua_pop(L, 1);

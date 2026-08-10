@@ -14,10 +14,12 @@ namespace IL2CPP
     
     t_class_get_fields class_get_fields = NULL;
     t_get_static_field_data get_static_field_data = NULL;
+    t_class_get_static_field_data class_get_static_field_data = NULL;
     t_field_get_name field_get_name = NULL;
     t_field_get_offset field_get_offset = NULL;
     t_class_get_parent class_get_parent = NULL;
     t_object_get_class object_get_class = NULL;
+    t_class_is_valuetype class_is_valuetype = NULL;
 
     t_method_get_param method_get_param = NULL;
 
@@ -50,11 +52,13 @@ namespace IL2CPP
         class_get_parent = (t_class_get_parent)dlsym(handle, "il2cpp_class_get_parent");
         object_get_class = (t_object_get_class)dlsym(handle, "il2cpp_object_get_class");
         class_value_size = (t_class_value_size)dlsym(handle, "il2cpp_class_value_size");
+        class_is_valuetype = (t_class_is_valuetype)dlsym(handle, "il2cpp_class_is_valuetype");
 
         method_get_param = (t_method_get_param)dlsym(handle, "il2cpp_method_get_param");
 
         class_get_fields = (t_class_get_fields)dlsym(handle, "il2cpp_class_get_fields");
         get_static_field_data = (t_get_static_field_data)dlsym(handle, "il2cpp_class_get_static_field_data");
+        class_get_static_field_data = (t_class_get_static_field_data)dlsym(handle, "il2cpp_class_get_static_field_data");
         field_get_name = (t_field_get_name)dlsym(handle, "il2cpp_field_get_name");
         field_get_offset = (t_field_get_offset)dlsym(handle, "il2cpp_field_get_offset");
 

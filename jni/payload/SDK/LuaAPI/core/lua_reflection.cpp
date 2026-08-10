@@ -3,6 +3,7 @@
 #include "../../Il2Cpp/Il2CppResolver.h"
 #include "../LuaHelper.h"
 #include "../../../log.h"
+#include "lua_wrap.h"
 
 namespace Reflections
 {
@@ -38,6 +39,39 @@ namespace Reflections
             IL2CPP::field_static_set_value(fieldInfo, &value);
         else
             IL2CPP::field_set_value(instance, fieldInfo, &value);
+    }
+
+    void PushTypedValue(lua_State* L, void* addr, const IL2CPP::Il2CppType* fieldType, IL2CPP::Il2CppClass* fieldClassIfStruct)
+    {
+        uint8_t type_enum = IL2CPP::type_get_type(fieldType);
+
+        switch (type_enum)
+        {
+            case 0x02: 
+                lua_pushboolean(L, *(bool*)addr);
+                return;
+            case 0x0C: 
+                lua_pushnumber(L, *(float*)addr);
+                return;
+            case 0x03: 
+            case 0x08:
+                lua_pushinteger(L, *(int32_t*)addr);
+                return;
+            case 0x05: 
+                lua_pushinteger(L, *(uint8_t*)addr);
+                return;
+            default:
+                break;
+        }
+
+        if (fieldClassIfStruct && IL2CPP::class_is_valuetype(fieldClassIfStruct))
+        {
+            API::PushStructWrapper(L, addr, fieldClassIfStruct);
+            return;
+        }
+
+        uintptr_t raw = *(uintptr_t*)addr;
+        LuaBridge::Helper::luaPushUintptr(L, raw);
     }
 }
 

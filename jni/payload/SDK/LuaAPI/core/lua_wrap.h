@@ -1,6 +1,7 @@
 #pragma once
 
 #include "libs/Lua54/lua.hpp"
+#include "../../Il2Cpp/Il2CppStructs.h"
 
 namespace API
 {
@@ -8,6 +9,11 @@ namespace API
     static int methodHandle_call(lua_State* L);
     static int methodHandle_hook(lua_State* L);
     static int methodHandle_index(lua_State* L);
+
+    void PushStructWrapper(lua_State* L, void* base, IL2CPP::Il2CppClass* klass);
+
+    static int structWrapper_index(lua_State* L);
+    static int structWrapper_newindex(lua_State* L);
 
     static int classWrapper_methodCall(lua_State* L);
     static int classWrapper_index(lua_State* L);
