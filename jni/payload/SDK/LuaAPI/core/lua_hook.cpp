@@ -22,11 +22,13 @@ namespace Hook
 
     int RegisterHook(lua_State* L, uintptr_t target, int argsCount, int callbackStackIdx)
     {
+        if (!lua_isfunction(L, callbackStackIdx)) return luaL_error(L, "Arg 3 must be a function");
+        
         if (addrToSlot.count(target) > 0)
         {
             int slot = addrToSlot[target];
 
-            lua_pushvalue(L, 3);
+            lua_pushvalue(L, callbackStackIdx);
             int callback = luaL_ref(L, LUA_REGISTRYINDEX);
             
             LuaBridge::registeredHooks[slot].callbacks.push_back(callback);
@@ -42,9 +44,7 @@ namespace Hook
             return 1;
         }
 
-        if (!lua_isfunction(L, 3)) return luaL_error(L, "Arg 3 must be a function");
-
-        lua_pushvalue(L, 3);
+        lua_pushvalue(L, callbackStackIdx);
         int r = luaL_ref(L, LUA_REGISTRYINDEX);
 
         LuaBridge::registeredHooks[current_slot].callbacks.push_back(r);
@@ -74,7 +74,7 @@ namespace API
         uintptr_t target = (uintptr_t)luaL_checkinteger(L, 1);
         int argsCount = luaL_checkinteger(L, 2);
 
-        if (!lua_isfunction(L, 3)) luaL_error(L, "Argument 3 must be a funtion!");
+        // if (!lua_isfunction(L, 3)) return luaL_error(L, "Argument 3 must be a funtion!");
             
         return Hook::RegisterHook(L, target, argsCount, 3);
     }

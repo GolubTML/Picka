@@ -4,6 +4,11 @@
 
 namespace API
 {
+    static int methodHandle_gc(lua_State* L);
+    static int methodHandle_call(lua_State* L);
+    static int methodHandle_hook(lua_State* L);
+    static int methodHandle_index(lua_State* L);
+
     static int classWrapper_methodCall(lua_State* L);
     static int classWrapper_index(lua_State* L);
     static int classWrapper_newindex(lua_State* L);
