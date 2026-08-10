@@ -104,9 +104,32 @@ namespace API
     {
         MethodHandle* h = (MethodHandle*)luaL_checkudata(L, 1, METHOD_HANDLE_META);
 
-        if (!lua_isfunction(L, 2)) return luaL_error(L, "Method hook() expected a function!");
+        int nargc = lua_gettop(L);
 
-        IL2CPP::MethodInfo* method = cacheMethodInfo(h->klass, h->name.c_str(), -1);
+        int callbackIdx;
+        int overloadArgc;
+
+        if (nargc == 2)
+        {
+            if (!lua_isfunction(L, 2)) return luaL_error(L, "Method hook() expected a function!");
+
+            callbackIdx = 2;
+            overloadArgc = -1;
+        }
+        else if (nargc == 3)
+        {
+            if (!lua_isnumber(L, 2)) return luaL_error(L, "Expected overload argument count as 2nd argument");
+            if (!lua_isfunction(L, 3)) return luaL_error(L, "Method hook() expected a function as last argument!");
+
+            overloadArgc = (int)luaL_checkinteger(L, 2);
+            callbackIdx = 3;
+        }
+        else
+        {
+            return luaL_error(L, "hook() expects hook(function) or hook(argc, function)!");
+        }
+
+        IL2CPP::MethodInfo* method = cacheMethodInfo(h->klass, h->name.c_str(), overloadArgc);
 
         if (!method)
             return luaL_error(L, "Cannot resolve method '%s' for hook", h->name.c_str());
@@ -115,7 +138,7 @@ namespace API
         if (!addr)
             return luaL_error(L, "Cannot get method pointer for '%s'", h->name.c_str());
 
-        return Hook::RegisterHook(L, addr, -1, 2);
+        return Hook::RegisterHook(L, addr, -1, callbackIdx);
     }
 
     int methodHandle_index(lua_State* L)
@@ -127,14 +150,6 @@ namespace API
             lua_pushcfunction(L, methodHandle_hook);
             return 1;
         }
-
-        // I need to write tests for overloads, before i make hook overload
-        
-        // if (strcmp(key, "hookOverload") == 0)
-        // {
-        //     lua_pushcfunction(L, ...); 
-        //     return 1;
-        // }
 
         lua_pushnil(L);
         return 1;
