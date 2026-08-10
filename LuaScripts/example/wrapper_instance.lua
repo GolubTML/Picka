@@ -1,3 +1,5 @@
+-- THIS MOD IS NOW USELESS, BECAUSE WE HAVE DEFAULT WRAPPERS NOW
+
 -- so, here the main differens in how wrappers works
 -- now, we need get field and methods from instance, not from class it self
 -- like, if we try use methods of Player, we get crash, because Player needs instance to work with

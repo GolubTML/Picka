@@ -1,3 +1,5 @@
+-- THIS MOD IS NOW USELESS, BECAUSE WE HAVE DEFAULT WRAPPERS NOW
+
 -- So, here, will be example of wrapper.
 -- Wrapper is a functions, with metatable in it.
 -- Function of wrapper, is making clean code:
