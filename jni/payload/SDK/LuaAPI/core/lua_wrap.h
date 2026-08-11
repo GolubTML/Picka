@@ -10,6 +10,12 @@ namespace API
     static int methodHandle_hook(lua_State* L);
     static int methodHandle_index(lua_State* L);
 
+    void PushArrayWrapper(lua_State* L, void* arrPtr);
+
+    static int arrayWrapper_index(lua_State* L);
+    static int arrayWrapper_newindex(lua_State* L);
+    static int arrayWrapper_len(lua_State* L);
+
     void PushStructWrapper(lua_State* L, void* base, IL2CPP::Il2CppClass* klass);
 
     static int structWrapper_index(lua_State* L);

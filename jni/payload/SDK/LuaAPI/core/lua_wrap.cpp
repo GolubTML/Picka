@@ -14,6 +14,7 @@ namespace API
     static const char* CLASS_WRAPPER_META = "picka.ClassWrapper";
     static const char* METHOD_HANDLE_META = "picka.MethodHandle";
     static const char* STRUCT_WRAPPER_META = "picka.StructWrapper";
+    static const char* ARRAY_WRAPPER_META = "picka.ArrayWrapper";
 
     std::unordered_map<IL2CPP::Il2CppClass*, std::unordered_map<std::string, IL2CPP::MethodInfo*>> g_MethodCache;
     std::unordered_map<IL2CPP::Il2CppClass*, std::unordered_map<std::string, void*>> g_FieldCache;
@@ -156,6 +157,36 @@ namespace API
         return 1;
     }
 
+    struct ArrayWrapper
+    {
+        void* arrPtr;
+        IL2CPP::Il2CppClass* elementClass;
+        bool elementAreValueType; // for arrays of pointers, like Main.player, Main.npc
+        size_t elementSize;
+    };
+
+    void PushArrayWrapper(lua_State* L, void* arrPtr)
+    {
+        if (!arrPtr)
+        {   
+            lua_pushnil(L);
+            return;
+        }
+
+        IL2CPP::Il2CppClass* arrayKlass = IL2CPP::object_get_class(arrPtr);
+        IL2CPP::Il2CppClass* elementClass = arrayKlass->_1.element_class;
+        uint32_t elementSize = arrayKlass->_2.element_size;
+
+        ArrayWrapper* a = (ArrayWrapper*)lua_newuserdata(L, sizeof(ArrayWrapper));
+        a->arrPtr = arrPtr;
+        a->elementClass = elementClass;
+        a->elementAreValueType = elementClass ? IL2CPP::class_is_valuetype(elementClass) : false;
+        a->elementSize = elementSize;
+
+        luaL_getmetatable(L, ARRAY_WRAPPER_META);
+        lua_setmetatable(L, -2);
+    }
+
     struct StructWrapper
     {
         void* base;
@@ -171,6 +202,61 @@ namespace API
         luaL_getmetatable(L, STRUCT_WRAPPER_META);
         lua_setmetatable(L, -2);    
     }
+
+    static int arrayWrapper_index(lua_State* L)
+    {
+        ArrayWrapper* a = (ArrayWrapper*)luaL_checkudata(L, 1, ARRAY_WRAPPER_META);
+        int index = (int)luaL_checkinteger(L, 2);
+
+        uint32_t len = IL2CPP::array_length(a->arrPtr);
+        if (index < 0 || index >= (int)len)
+            return luaL_error(L, "Index '%d' is out of bounds! (array length: %u)", index, len);
+
+        uintptr_t header = (uintptr_t)IL2CPP::array_object_header_size();
+        uintptr_t elementAddr = (uintptr_t)a->arrPtr + header + (index * a->elementSize);
+
+        if (a->elementAreValueType)
+        {
+            API::PushStructWrapper(L, (void*)elementAddr, a->elementClass);
+            return 1;
+        }
+
+        uintptr_t objPtr = *(uintptr_t*)elementAddr;
+        if (objPtr)
+            LuaBridge::Helper::luaPushUintptr(L, objPtr);
+        else
+            lua_pushnil(L);
+
+        return 1;
+    }
+    static int arrayWrapper_newindex(lua_State* L)
+    {
+        ArrayWrapper* a = (ArrayWrapper*)luaL_checkudata(L, 1, ARRAY_WRAPPER_META);
+        int index = (int)luaL_checkinteger(L, 2);
+
+        uint32_t len = IL2CPP::array_length(a->arrPtr);
+        if (index < 0 || index >= (int)len)
+            return luaL_error(L, "Index '%d' is out of bounds! (array length: %u)", index, len);
+
+        uintptr_t header = (uintptr_t)IL2CPP::array_object_header_size();
+        uintptr_t elementAddr = (uintptr_t)a->arrPtr + header + (index * a->elementSize);
+
+        if (a->elementAreValueType)
+        {
+            return luaL_error(L, "Direct assignment to value-type array elements not supported. Modify element of array instead!");
+        }
+
+        uintptr_t value  = LuaBridge::Helper::luaToUintptr(L, 3);
+        *(uintptr_t*)elementAddr = value;
+        return 0;
+    }
+    static int arrayWrapper_len(lua_State* L)
+    {
+        ArrayWrapper* a = (ArrayWrapper*)luaL_checkudata(L, 1, ARRAY_WRAPPER_META);
+        lua_pushinteger(L, (lua_Integer)IL2CPP::array_length(a->arrPtr));
+        return 1;
+    }
+
 
     int structWrapper_index(lua_State* L)
     {
@@ -263,6 +349,15 @@ namespace API
                 addr = (char*)w->instance + offset;
             }
 
+            uint8_t type_enum = IL2CPP::type_get_type(fieldType);
+
+            if (type_enum == 0x1D)
+            {
+                uintptr_t arrayPtr = *(uintptr_t*)addr;
+                PushArrayWrapper(L, (void*)arrayPtr);
+                return 1;
+            }
+
             Reflections::PushTypedValue(L, addr, fieldType, fieldClass);
             return 1;
         }
@@ -272,11 +367,6 @@ namespace API
         h->klass = w->klass;
         h->instance = w->instance;
         h->name = fieldName;
-
-        // lua_pushlightuserdata(L, w->klass);
-        // lua_pushlightuserdata(L, w->instance);
-        // lua_pushstring(L, fieldName);
-        // lua_pushcclosure(L, classWrapper_methodCall, 3);
 
         luaL_getmetatable(L, METHOD_HANDLE_META);
         lua_setmetatable(L, -2);
@@ -382,6 +472,15 @@ namespace API
         lua_setfield(L, -2, "__index");
         lua_pushcfunction(L, methodHandle_gc);
         lua_setfield(L, -2, "__gc");
+        lua_pop(L, 1);
+
+        luaL_newmetatable(L, ARRAY_WRAPPER_META);
+        lua_pushcfunction(L, arrayWrapper_index);
+        lua_setfield(L, -2, "__index");
+        lua_pushcfunction(L, arrayWrapper_newindex);
+        lua_setfield(L, -2, "__newindex");
+        lua_pushcfunction(L, arrayWrapper_len);
+        lua_setfield(L, -2, "__len");
         lua_pop(L, 1);
 
         luaL_newmetatable(L, STRUCT_WRAPPER_META);

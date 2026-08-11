@@ -26,162 +26,48 @@
                 float ai0, float ai1, float ai2, 
                 Terraria_NewProjectileModifier_o* modifer, 
             const MethodInfo* method);
-
-            Oh fuck..
 ]]    
 
--- let's copy wrapInstane
-
-local function wrapInstance(instance, namespace, klassName, assemblies)
-    if not instance or instance == 0 then return nil end
-
-    local class = picka.getClass(assemblies or "Assembly-CSharp", namespace, klassName)
-    if not class then return nil end
-    
-    local cache = {}
-    local wrapper = { _ptr = instance }
-
-    setmetatable(wrapper, {
-        __index = function (t, k)
-            if cache[k] then return cache[k] end
-
-            local value = picka.getField(t._ptr, k)
-            if value ~= nil then return value end
-
-            local methodWrapper = function (...)
-                local args = {...}
-                local method = picka.getMethodInfo(class, k, #args)
-
-                if method then
-                    picka.callMethod(method, t._ptr, ...) 
-                else
-                    picka.log("ERR: instance method " .. key .. " with amount of arguments " .. #args .. " not found!")
-                end
-
-            end
-
-            cache[k] = methodWrapper
-            return methodWrapper
-        end,
-
-        __newindex = function (t, k, v)
-            picka.setField(t._ptr, k, v)
-        end
-    })
-
-    return wrapper
-end
-
-local function wrapClass(namespace, klassName, assemblies)
-    local class = picka.getClass(assemblies or "Assembly-CSharp", namespace, klassName)
-    if not class then return nil end
-
-    local cache = {}
-    local wrapper = { _ptr = class }
-
-    setmetatable(wrapper, {
-        __index = function (t, key)
-            if cache[key] then
-                return cache[key]
-            end
-
-            local value = picka.getFieldStatic(class, key)
-
-            if value ~= nil then
-                return value
-            end
-
-            local methodWrapper = function (...)
-                local args = {...} 
-
-                -- picka.log("Calling " .. key .. " with " .. #args .. " arguments") -- ТУТ МЫ УВИДИМ ПРАВДУ
-                -- for i, v in ipairs(args) do
-                --     picka.log("Arg " .. i .. ": " .. tostring(v))
-                -- end
-
-                local method = picka.getMethodInfo(class, key, #args)
-
-                if method then
-                    return picka.callMethod(method, ...)
-                else
-                    picka.log("ERR: Class method " .. key .. " with amount of arguments " .. #args .. " not found!")
-                end
-                
-            end
-
-            cache[key] = methodWrapper
-            return methodWrapper
-        end,
-        __newindex = function (t, key, v)
-            return picka.setFieldStatic(class, key, v)
-        end
-    })
-    
-    return wrapper
-end
-
-local ItemClass = picka.getClass("Assembly-CSharp", "Terraria", "Item")
-if ItemClass == nil then picka.log("Cannot find Item class!") end
-
-local iSetDefaults = picka.getMethodAddr(ItemClass, "SetDefaults", -1)
-if iSetDefaults == nil then picka.log("Cannot get Item.SetDefaults!") end
+-- here we are declaring all class that we will need
+local Item = picka.class("Terraria", "Item")
+local Player = picka.class("Terraria", "Player")
+local Projectile = picka.class("Terraria", "Projectile")
+local Main = picka.class("Terraria", "Main")
 
 local item = nil
 
-picka.hook(iSetDefaults, 2, function (original, instance, Type, variant)
+Item.SetDefaults:hook(function (original, instance, Type, variant)
     picka.callNative(original, instance, Type, variant)
 
-    item = wrapInstance(instance, "Terraria", "Item")
-    if item == nil then picka.log("Cannot get wrap of instance!") end
+    item = picka.wrap(instance)
 
     if Type == 3507 then
         item.damage = 500 -- let's damage will be 500 for example
         item.shootSpeed = 10 -- and shoot speed for example 10
+        item.expert = true
+        item.useStyle = 5
     end
 end)
 
--- and now, we need to hook Player.ItemCheck_Shoot
-local PlayerClass = picka.getClass("Assembly-CSharp", "Terraria", "Player")
-if PlayerClass == nil then picka.log("Cannot find Plater class!") end
-local positionOffset = picka.getFieldOffset(PlayerClass, "position")
-
-local itemCheck_Shoot = picka.getMethodAddr(PlayerClass, "ItemCheck_Shoot", -1)
-if itemCheck_Shoot == nil then picka.log("Cannot get Player.ItemCheck_Shoot!") end
-
--- also, we need RotateBy method, as i sad before
-local Utils = wrapClass("Terraria", "Utils")
-if Utils == nil then picka.log("Cannot get wrapped Utils class!") end
-
-local Projectile = wrapClass("Terraria", "Projectile")
-if Projectile == nil then picka.log("Cannot get wrapped Projectile class!") end
-
-local MainClass = picka.getClass("Assembly-CSharp", "Terraria", "Main")
-local Main = wrapClass("Terraria", "Main")
-local screenPosOffset = picka.getFieldOffset(MainClass, "screenPosition")
-
 local player = nil
 
-picka.hook(itemCheck_Shoot, 4, function (original, instance, i, sItem, weaponDamage, withAudioVisualFeedback)
+Player.ItemCheck_Shoot:hook(function (original, instance, i, sItem, weaponDamage, withAudioVisualFeedback)
     -- so, here we need to get item instance
     -- eventually, we have sItem here
-    item = wrapInstance(sItem, "Terraria", "Item")
-    if item == nil then picka.log("Cannot get Item instance!") end
+    item = picka.wrap(sItem)
 
-    player = wrapInstance(instance, "Terraria", "Player")
-    if player == nil then picka.log("Cannot get Player instance!") end
+    player = picka.wrap(instance)
 
     if item.type == 3507 then
         if player.itemAnimation == player.itemAnimationMax - 1 then
-            local px = picka.readFloat(instance, positionOffset)
-            local py = picka.readFloat(instance, positionOffset + 4)
+            local px = player.position.X
+            local py = player.position.Y
 
             local screenWidth = Main.get_screenWidth() 
             local screenHeight = Main.get_screenHeight()
 
             local mX = Main.get_mouseX()
             local mY = Main.get_mouseY()
-
-            local vel = { x = 0, y = 0 } -- let's say, it's zero for now
 
             local dx = mX - (screenWidth / 2)
             local dy = mY - (screenHeight / 2)
@@ -192,17 +78,7 @@ picka.hook(itemCheck_Shoot, 4, function (original, instance, i, sItem, weaponDam
             local speed = item.shootSpeed
             if speed == 0 then speed = 12.0 end
 
-            local velX = (dx / dist) * speed
-            local velY = (dy / dist) * speed
-
             local source = Projectile.GetNoneSource()
-
-            picka.log("Projectile spawned at: " .. px .. " " .. py .. " Source: " .. tostring(source))
-            
-            picka.log("Extracted Pos: " .. tostring(px) .. ", " .. tostring(py))
-
-            picka.log(string.format("[DEBUG] Player: %.1f,%.1f | Mouse: %d,%d", px, py, mX, mY))
-            picka.log(string.format("[DEBUG] Final Vector: %.2f, %.2f", velX, velY))
 
             local baseAngle = math.atan(dy, dx)
 
@@ -217,7 +93,7 @@ picka.hook(itemCheck_Shoot, 4, function (original, instance, i, sItem, weaponDam
                 Projectile.NewProjectile(source, 
                     px, py,
                     vX, vY,
-                    math.random(1000), -- use ALL 1000 projectiles in game 
+                    79,
                     item.damage,
                     0.4,
                     player.whoAmI,
