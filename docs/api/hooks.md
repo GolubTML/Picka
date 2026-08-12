@@ -76,7 +76,7 @@ end)
 
 You can make pretty much __anything__ with this, including loading completely new _modded content_ - you just need to figure out how to build it. 
 
-This is all for High Level API, you can see example mods [here]().
-Also, you can see [Utility API]() and [Low Level API]() for more understanding, how all of this works.
+This is all for High Level API, you can see example mods [here](../../LuaScripts/example/).
+Also, you can see [Utility API](../home.md#utility-api) and [Low Level API](low-level_API.md) for more understanding, how all of this works.
 
 __Enjoy__

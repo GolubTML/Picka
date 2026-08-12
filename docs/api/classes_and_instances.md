@@ -8,7 +8,7 @@ Picka API provides two main methods for working with Terraria objects:
 ``` Lua
 picka.class(namespace, name) -> C# Class wrapper
 ```
-First argument is a `namespace`. It can be: `Terraria`, `Microsoft.Xna.Framework`, `'Microsoft.Xna.Framework.Graphics` and etc. 
+First argument is a `namespace`. It can be: `Terraria`, `Microsoft.Xna.Framework`, `Microsoft.Xna.Framework.Graphics` and etc. 
 Second argument is a name, specifically __class name__. For example: `Main`, `Player`, `Projectile`, `NPC` and etc.
 
 `picka.class` give you ability to find and set static fields of the class and also, call static methods of class. Example mini mod:
