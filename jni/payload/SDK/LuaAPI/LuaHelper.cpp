@@ -25,6 +25,22 @@ namespace LuaBridge::Helper
         case 0x05:
             *(int*)addr = lua_tointeger(L, luaValueIdx);
             return;
+
+        case 0x0E:
+        {
+            if (lua_type(L, luaValueIdx) == LUA_TSTRING)
+            {
+                const char* str = lua_tostring(L, luaValueIdx);
+                void* il2cppStr = IL2CPP::new_string(str);
+                *(void**)addr = il2cppStr;
+            }
+            else
+            {
+                *(uintptr_t*)addr = luaToUintptr(L, luaValueIdx);
+            }
+
+            return;
+        }
         
         default:
             *(uintptr_t*)addr = luaToUintptr(L, luaValueIdx);

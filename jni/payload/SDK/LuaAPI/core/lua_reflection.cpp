@@ -60,6 +60,15 @@ namespace Reflections
             case 0x05: 
                 lua_pushinteger(L, *(uint8_t*)addr);
                 return;
+            case 0x0E:
+            {
+                void* il2cppStr = *(void**)addr;
+                if (!il2cppStr) { lua_pushnil(L); return; }
+
+                std::string str = IL2CPP::Resolver::GetString(il2cppStr);
+                lua_pushstring(L, str.c_str());
+                return;
+            }
             default:
                 break;
         }

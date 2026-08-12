@@ -46,6 +46,7 @@ Item.SetDefaults:hook(function (original, instance, Type, variant)
         item.shootSpeed = 10 -- and shoot speed for example 10
         item.expert = true
         item.useStyle = 5
+        item.SetNameOverride("Sword of fools")
     end
 end)
 

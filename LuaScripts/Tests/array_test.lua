@@ -27,10 +27,19 @@ if npcs then
 end
 
 local player = picka.wrap(Main.player[Main.get_myPlayer()])
-local pos = player.position
+-- local pos = player.position
+player.name = "Cool name"
 
--- player.Teleport({ X = 228, Y = -1337 }, 0, 0)
-pos.X = 228
-pos.Y = -1337
+local playerName = "Player name: " .. player.name
+Main.NewText(playerName, 255, 255, 255)
 
-player.position = pos
+-- local newPosition = {
+--     X = 228,
+--     Y = -1337
+-- }
+-- 
+-- player.Teleport(newPosition, 0, 0)
+-- pos.X = 228
+-- pos.Y = -1337
+-- 
+-- player.position = pos
