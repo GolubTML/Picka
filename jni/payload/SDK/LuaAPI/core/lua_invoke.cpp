@@ -103,6 +103,15 @@ namespace Invoke
                 ffi_type* f_type = get_ffi_type(raw_type);
                 arg_types[i] = f_type;
 
+                if (raw_type == 0x0E && lua_type(L, lua_idx) == LUA_TSTRING)
+                {
+                    const char* str = lua_tostring(L, lua_idx);
+                    void* il2cppString = IL2CPP::new_string(str);
+
+                    storage[i].p = (uintptr_t)il2cppString;
+                    arg_values[i] = &storage[i];
+                    continue;
+                }
 
                 if (f_type == &ffi_type_float) 
                 {
