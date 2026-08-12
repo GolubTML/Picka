@@ -27,6 +27,6 @@ And also, you need to compile FloatButtonHelper (use `./JavaHelper/javac_compile
 After all of this staff, use `assemble_apk.sh` in root folder (_but adjust path to your Terraria resourses in file_) and here you have it, Picka it self. 
 In addition, give Terraria acces to storage in settings of your phone, because Picka runs mods from `Mods` folder in `/storage/emulated/0/` (this will be fixed in launcher)
 
-For documentation, see this [documentation](Documentation.md)
+For documentation, see this [documentation](docs/home.md)
 
 Enjoy!

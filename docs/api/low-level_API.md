@@ -1,68 +1,61 @@
-# Picka Lua API Documentation
+# Low-Level API
 
-All mods for Picka written in Lua via specific API. Currently, Picka API only give 16 functions for mods, but for now, it's more than enough. For better understanding of modding with Lua, I recommend to learn Lua itself. 
+Picka's Low-Level API provides direct access to the underlying Il2Cpp objects and methods used by Terraria.
 
-Picka API currently provides 16 methods., and here are list of it:
-1. [Log](#log):
-	- `picka.log(str)`
-2. [Il2Cpp Structures](#il2cpp-structures):
-	- `picka.newString(str)`
-3. [Classes](#classes):
+Unlike [High-Level API](../home.md), which is designed to hide most of the _Il2Cpp_-specific details, the Low-Level API expose them directly. This gives you more control over how classes, methods, fields and memory are accessed, but also requires a better understanding of Il2Cpp and Terraria's internal structures.
+
+It's recommended to use High-level API in mods whenever possible. 
+The Low-Level API is mainly useful when: 
+- a feature is not available through the High-Level API; 
+- you need direct access to a method pointer or `MethodInfo`; 
+- you need to work with fields or structures that are not supported by the High-Level API; 
+- you are developing your own systems or loaders on top of Picka. 
+ 
+**Warning:** Low-Level API functions operate much closer to the game's internals. Passing an incorrect object, pointer, argument count or data type may cause crashes or undefined behaviour.
+
+## Before you start
+
+The low-level API uses several concepts that are hidded by the high-level API.
+
+- `C# Class` - a pointer/reference to Il2Cpp class.
+- `Instances` - an object created from `C# Class`
+- `Method pointer` - native addres of method
+- `MethodInfo` - Il2Cpp metadata describing a method
+- `Field offsets` - the location of fields inside object or structure
+
+If you are nor familiar with this concepts, it's better to start with High-Level API, instead of low-level.
+# API overview:
+
+1. [Classes](#classes):
 	- `picka.getClass(assemblies, namespace, className)`
 	- `picka.getStaticField(class, fieldName)`
 	- `picka.setStaticField(class, fieldName, value)`
 	- `picka.getField(instance, fieldName)`
 	- `picka.setField(instance, fieldName, value)`
-4. [Methods](#methods):
-	Following methods will have overloads:
-	- Method Address:
-      - 1.`picka.getMethodAddr(assemblies, namespace, className, methodName, args)`
-      - 2.`picka.getMethodAddr(class, methodName, args)`
-	- MethodInfo:
-	  - 1.`picka.getMethodInfo(assemblies, namespace, className, methodName, args)`
-	  - 2.`picka.getMethodInfo(class, methodName, args)`
-	- Method calling and hooking:
-	  - (callNative and callMethod have big differens, later on, i will show it)
-	  - `picka.callNative(methodPointer, args)`
-	  - `picka.callMethod(methodPointer, args)`
-	  - `picka.hook(methodPtr, args, func)`
-5. [Arrays](#arrays):
+2. [Methods](#methods):
+- Method Address:
+	 1.`picka.getMethodAddr(assemblies, namespace, className, methodName, args)`
+	 2.`picka.getMethodAddr(class, methodName, args)`
+- MethodInfo:
+	- 1.`picka.getMethodInfo(assemblies, namespace, className, methodName, args)`
+	- 2.`picka.getMethodInfo(class, methodName, args)`
+- Method calling and hooking:
+	- `picka.callNative(methodPointer, args)`
+	- `picka.callMethod(methodPointer, args)`
+	- `picka.hook(methodPtr, args, func)`
+3. [Arrays](#arrays):
 	- `picka.getArrayLength(array)`
 	- `picka.getArrayElement(array, index)`
-6. [Memory manipulation](#memory-manipulation):
+4. [Memory manipulation](#memory-manipulation):
 	- `picka.readFloat(instance, fieldOffset)`
 	- `picka.getFieldOffset(instance, fieldName)`
-
-Also, you might want to see useful examples of mods. Click here -> [Some more information](#some-more-information)
-
-
-# Examples:
-#### Log
-The most easiest method in API, just print log in `logcat` (use adb logcat | grep "Payload" via USB debugging).
-
-Example:
-``` Lua
-picka.log("Hi from my Mod!")
--- also, you can use print as well, API works with this too
-print("And hi from here too!")
-```
-
-### Il2Cpp Structures
-For now, Picka has only one method to work with Il2Cpp structure. `picka.newString` uses for cases, where we need to cast C# strint (`System.String`) to a method. Example of it, can be `Main.NewText` in Terraria, it uses `System.String` from C#.
-
-Example:
-``` Lua
-local il2cppString = picka.newString("Il2Cpp string was created!")
--- just create il2Cpp string
-```
-
-# Classes
-## picka.getClass:
+## Classes
+### picka.getClass:
 So, `picka.getClass` returns pointer to some class in memory. 
 ``` Lua
 picka.getClass(assembly, namespace, className) -> pointer
 ```
-With it, we can create some small mods. As arguments, `getClass` takes `assembly` - where we need to find namespace (for all Terraria methods it's `Assembly-CSharp`), `namespace` - where our class is (more often, you will use `Terraria` as a namespace, but i recommend to check, in what namespace, you class located. For better research, you can use this [website](https://docs.tmodloader.net/docs/1.4-preview/), but it's for Terraria 1.4)
+With it, we can create some small mods. As arguments, `getClass` takes `assembly` - where we need to find namespace (for all Terraria methods it's `Assembly-CSharp`), `namespace` - where our class is (more often, you will use `Terraria` as a namespace, but i recommend to check, in what namespace, you class located.
 
 Example:
 ``` Lua
@@ -70,7 +63,7 @@ local MainClass = picka.getClass("Assembly-CSharp", "Terraria", "Main")
 -- also, you have acces to Unity classes as well. Assemblies of Unity often is Unity-Engine (and this namespace too)
 ```
 
-## picka.getStaticField:
+### picka.getStaticField:
 With this method, we can get value of static(!) field in class. As arguments, takes `class` pointer and `field` name. 
 
 Example:
@@ -81,7 +74,7 @@ local dayTime = picka.getStaticFiled(MainClass, "dayTime") -- return dayTime boo
 picka.log("Day time is: " .. tostring(dayTime))
 ```
 
-## picka.setStaticField:
+### picka.setStaticField:
 Opposite of `getStaticField`. Set specific value to field (will not work, if field - class or structure!). As arguments, takes `class` pointer, `field` name and `value`. 
 
 Example:
@@ -96,7 +89,7 @@ if dayTime ~= 0 then
 end
 ```
 
-## picka.getField & picka.setField:
+### picka.getField & picka.setField:
 It's work's the same as `getStaticField` and `setStaticField`, but! as first argument, these methods get *non static classes* or *instance* in other words. It uses in case, if you want to increase player health for example. Other arguments are the same.
 
 Example:
@@ -116,12 +109,11 @@ picka.hook(pHurt, 10, function (original, instance, ...)
 end)
 ```
 
-
-# Methods
+## Methods
 
 Here, we have two overloads, for two methods: `getMethodAddr` and `getMethodInfo`. Let's start with `getMethodAddr`.
 
-## picka.getMethodAddr:
+### picka.getMethodAddr:
 This function returns pointer to specific method.
 ``` Lua
 picka.getMethodAddr(assembly, namespace, className, methodName, args) -> pointer
@@ -143,7 +135,7 @@ else
 end
 ```
 
-## picka.getMethodInfo:
+### picka.getMethodInfo:
 As `getMethodAddr`, this function work the same, but(!), it's return MethodInfo (Il2Cpp struct), instead of pointer to memory.
 ``` Lua
 picka.getMethodInfo(assembly, namespace, className, methodName, args) -> MethodInfo
@@ -161,7 +153,7 @@ local NewText = picka.getMethodInfo(MainClass, "NewText", 2) -- let's here use o
 picka.log("Found NewText with 2 overloads! " .. tostring(NewText))
 ```
 
-## picka.callNative & picka.callMethod:
+### picka.callNative & picka.callMethod:
 And *here*, starts interesting part. Now, we can call our methods via these methods. 
 Arguments for both the same, but have one different:
 
@@ -187,7 +179,7 @@ picka.callNative(NewText, hiString, 255, 0, 0) -- red message
 ```
 
 #### And now, picka.callMethod
-Remember, when i told, we would need to use `picka.getMethodInfo` in future? Here it is. Main different from `callNative`, we can use and call ***complex*** methods with it (by ***complex*** methods, i assume methods, which uses `float/double` types, *structures* and classes. For example: `Projectile.NewProjectile(IEntitySource spawnSource, float x, float y, float vx, float vy, int Type, int damage, float knockBack, int owner, float ai0, float ai1, float ai2, NewProjectileModifier modifer)`, or, for example, something much easier: `Main.NewText(System.String string, Color color)`, where `Color` is a struct)
+Remember, when i told, we would need to use `picka.getMethodInfo` in future? Here it is. Main different from `callNative`, we can use and call methods which required as arguments __C# Structures__. For example: `Projectile.NewProjectile(IEntitySource spawnSource, float x, float y, float vx, float vy, int Type, int damage, float knockBack, int owner, float ai0, float ai1, float ai2, NewProjectileModifier modifer)`, or, for example, something much easier: `Main.NewText(System.String string, Color color)`
 
 Example
 ``` Lua
@@ -287,6 +279,3 @@ picka.hook(playerHurt, 10, function(original, instance, ...)
 end)
 ```
 
-
-# Some more information
-If you want to see some mods example (or tests), you can just look for `LuaScripts/example or LuaScripts/Tests`. Good luck! :D
