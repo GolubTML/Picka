@@ -39,3 +39,20 @@ npc.life = npc.lifeMax
 ```
 And also, `picka.wrap` does not create a new class object, it only wrap existing object instance!
 
+## But how to create new instance of class?
+Well, for that we also have method - `Class.new()`.
+Unlike `picka.class` or `picka.wrap`, which give you acces to a class or existing object, `Class.new()` creates a completely new instance. Picka will automatically select correct constructor overloads (if constructor has overloads). For example:
+``` Lua
+local Item = picka.class("Terraria", "Item")
+local newItem = Item.new() -- using constructor of Item!
+
+picka.log("Created new item: " .. tostring(newItem))
+newItem.type = 9999 -- id of item
+```
+Or, another example
+``` Lua
+local MemoryStream = picka.class("System.IO", "MemoryStream")
+local stream = MemoryStream.new(1024)
+
+picka.log("Created new memory stream: " .. tostring(stream))
+```

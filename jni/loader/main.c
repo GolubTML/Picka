@@ -12,13 +12,20 @@ void init()
     void* handle = dlopen("/data/data/com.and.games505.TerrariaPaid/files/libpayload.so", RTLD_NOW);
     if (!handle)
     {
-        LOGI("Maybe, payload.so in apk?..");
+        const char* error = dlerror();
+
+        LOGI("Failed to load libpayload from files!");
+        LOGI("dlopen error: %s", error ? error : "unknown error");
 
         handle = dlopen("libpayload.so", RTLD_NOW);
 
         if (!handle)
         {
+            error = dlerror();
+
             LOGI("Failed to load payload.so! %s", dlerror());
+            LOGI("dlopen error: %s", error ? error : "unknown error");
+
             return;
         }   
         else

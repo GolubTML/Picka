@@ -140,4 +140,19 @@ namespace IL2CPP
 
     struct Il2CppAssembly;
     struct Il2CppImage;
+
+    typedef uintptr_t il2cpp_array_size_t;
+    typedef int32_t il2cpp_array_lower_bound_t;
+    struct Il2CppArrayBounds
+    {
+        il2cpp_array_size_t length;
+        il2cpp_array_lower_bound_t lower_bound;
+    };
+
+    // custom Il2CppArray 
+    struct Il2CppArray : public Il2CppObject
+    {
+        Il2CppArrayBounds* bounds;
+        uint32_t max_length;
+    };
 }

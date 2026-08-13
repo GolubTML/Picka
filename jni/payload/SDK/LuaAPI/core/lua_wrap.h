@@ -22,6 +22,7 @@ namespace API
     static int structWrapper_newindex(lua_State* L);
 
     static int classWrapper_methodCall(lua_State* L);
+    static int classWrapper_ctorCall(lua_State* L);
     static int classWrapper_index(lua_State* L);
     static int classWrapper_newindex(lua_State* L);
 

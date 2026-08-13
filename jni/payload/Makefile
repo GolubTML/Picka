@@ -6,6 +6,7 @@ CC  := $(BIN)/aarch64-linux-android26-clang
 LUA_DIR := libs/Lua54
 FFI_DIR := libs/libffi
 JSON_DIR := libs/nlohmann
+STB_IMAGE_DIR := libs/stb_image
 PAYLOAD_DIR := .
 BUILD_DIR := ../../build/payload
 
@@ -15,7 +16,7 @@ LUA_SRCS := $(wildcard $(LUA_DIR)/*.c)
 CPP_OBJS := $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(CPP_SRCS))
 LUA_OBJS := $(patsubst %.c, $(BUILD_DIR)/%.o, $(LUA_SRCS))
 
-CFLAGS   := -fPIC -O2 -I. -I$(LUA_DIR) -I$(FFI_DIR)/include -I$(PAYLOAD_DIR) -I$(JSON_DIR) -MMD -MP
+CFLAGS   := -fPIC -O2 -I. -I$(LUA_DIR) -I$(FFI_DIR)/include -I$(PAYLOAD_DIR) -I$(JSON_DIR) -I$(STB_IMAGE_DIR) -MMD -MP
 CXXFLAGS := $(CFLAGS) -std=c++17
 LDFLAGS  := -shared -llog -landroid -ldl -static-libstdc++ -Wl,--export-dynamic
 

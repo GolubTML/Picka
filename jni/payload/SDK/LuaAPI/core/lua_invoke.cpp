@@ -147,6 +147,19 @@ namespace Invoke
 
         return result;
     }
+
+    uintptr_t CallMethodInternal(lua_State* L, IL2CPP::MethodInfo* methodInfo, std::function<void(lua_State*)> pushArgs)
+    {
+        int savedTop = lua_gettop(L);
+
+        int argsBase = savedTop + 1;
+        pushArgs(L);
+
+        uintptr_t result = CallMethod(L, methodInfo, argsBase);
+
+        lua_settop(L, savedTop);
+        return result;
+    }
 }
 
 namespace API

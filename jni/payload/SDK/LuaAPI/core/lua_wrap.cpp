@@ -323,12 +323,50 @@ namespace API
 
         return 1;
     }
+
+    int classWrapper_ctorCall(lua_State* L)
+    {
+        IL2CPP::Il2CppClass* klass = (IL2CPP::Il2CppClass*)lua_touserdata(L, lua_upvalueindex(1));
+
+        int argc = lua_gettop(L);
+
+        IL2CPP::MethodInfo* ctor = cacheMethodInfo(klass, ".ctor", argc);
+        if (!ctor)
+            return luaL_error(L, "Constructor with %d args not found for this class", argc);
+
+        IL2CPP::Il2CppObject* instance = IL2CPP::object_new(klass);
+        if (!instance)
+            return luaL_error(L, "il2cpp_object_new returned null - failed to allocate instance");
+    
+        lua_pushlightuserdata(L, instance);
+        lua_insert(L, 1);
+
+        Invoke::CallMethod(L, ctor, 1);
+
+        ClassWrapper* w = (ClassWrapper*)lua_newuserdata(L, sizeof(ClassWrapper));
+        w->klass = klass;
+        w->instance = instance;
+
+        luaL_getmetatable(L, CLASS_WRAPPER_META);
+        lua_setmetatable(L, -2);
+
+        return 1;
+    }
+
     int classWrapper_index(lua_State* L)
     {
         ClassWrapper* w = (ClassWrapper*)luaL_checkudata(L, 1, CLASS_WRAPPER_META);
         const char* fieldName = luaL_checkstring(L, 2);
 
         bool isStatic = (w->instance == nullptr);
+
+        if (isStatic && strcmp(fieldName, "new") == 0)
+        {
+            lua_pushlightuserdata(L, w->klass);
+            lua_pushcclosure(L, classWrapper_ctorCall, 1);
+            return 1;
+        }
+
         IL2CPP::Il2CppClass* klass = w->instance ? IL2CPP::object_get_class(w->instance) : w->klass;
 
         void* fieldInfo = cacheFieldInfo(klass, fieldName, isStatic);
@@ -337,7 +375,7 @@ namespace API
             const IL2CPP::Il2CppType* fieldType = IL2CPP::field_get_type(fieldInfo);
             IL2CPP::Il2CppClass* fieldClass = IL2CPP::class_from_type(fieldType);
             size_t offset = IL2CPP::field_get_offset(fieldInfo);
-
+ 
             void* addr;
             if (isStatic)
             {
