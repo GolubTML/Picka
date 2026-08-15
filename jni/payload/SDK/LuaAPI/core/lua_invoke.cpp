@@ -5,6 +5,8 @@
 #include "../../Il2Cpp/Il2CppResolver.h"
 
 #include "../LuaHelper.h"
+#include "lua_wrap.h"
+#include <unordered_map>
 
 static ffi_type* get_ffi_type(uint8_t il2cpp_type_enum) 
 {
@@ -15,9 +17,14 @@ static ffi_type* get_ffi_type(uint8_t il2cpp_type_enum)
         case 0x01: return &ffi_type_void;    // void
         case 0x02: return &ffi_type_uint8;   // bool
         case 0x03: return &ffi_type_sint32;  // int
+        case 0x04: return &ffi_type_sint8;
+        case 0x05: return &ffi_type_uint8;
+        case 0x06: return &ffi_type_sint16;
+        case 0x07: return &ffi_type_uint16;
         case 0x08: return &ffi_type_sint32;
         case 0x0C: return &ffi_type_float;   // float and System.Single
-        case 0x09: return &ffi_type_double;  // double
+        case 0x0D: return &ffi_type_double;
+        case 0x09: return &ffi_type_uint32;
         case 0x0e:                           // string
         case 0x12:                           // class
         case 0X1C:                           // object
@@ -26,6 +33,41 @@ static ffi_type* get_ffi_type(uint8_t il2cpp_type_enum)
         default: 
             return &ffi_type_pointer;
     }
+}
+
+static ffi_type* build_struct_ffi_type(IL2CPP::Il2CppClass* klass)
+{
+    static std::unordered_map<void*, ffi_type*> cache;
+    auto found = cache.find(klass);
+    if (found != cache.end())
+        return found->second;
+        
+    std::vector<ffi_type*> elements;
+
+    void* iter = nullptr;
+    void* field;
+    while ((field = IL2CPP::class_get_fields(klass, &iter)) != nullptr)
+    {
+        if (IL2CPP::field_get_flags(field) & 0x0010)
+            continue;
+
+        const IL2CPP::Il2CppType* fieldType = IL2CPP::field_get_type(field);
+        uint8_t rawType = IL2CPP::type_get_type(fieldType);
+        elements.push_back(get_ffi_type(rawType));
+    }
+    elements.push_back(nullptr); 
+
+    ffi_type* structType = new ffi_type();
+    structType->size = 0;
+    structType->alignment = 0;
+    structType->type = FFI_TYPE_STRUCT;
+
+    ffi_type** elems = new ffi_type*[elements.size()];
+    std::copy(elements.begin(), elements.end(), elems);
+    structType->elements = elems;
+
+    cache[klass] = structType;
+    return structType;
 }
 
 namespace Invoke
@@ -82,19 +124,8 @@ namespace Invoke
                     void* structBuffer = alloca(size);
                     LuaBridge::Helper::fillStructFromTable(L, lua_idx, structClass, structBuffer);
 
-                    if (size <= 8) 
-                    {
-                        storage[i].p = 0; 
-                        memcpy(&storage[i].p, structBuffer, size);
-                        
-                        arg_types[i] = &ffi_type_uint64;
-                        arg_values[i] = &storage[i].p;
-                    } 
-                    else 
-                    {
-                        arg_values[i] = structBuffer;
-                        arg_types[i] = &ffi_type_pointer;
-                    }
+                    arg_types[i] = build_struct_ffi_type(structClass);
+                    arg_values[i] = structBuffer;
                     continue; 
                 }
 

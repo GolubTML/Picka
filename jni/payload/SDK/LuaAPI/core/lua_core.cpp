@@ -74,181 +74,229 @@ namespace API
         const char* path = luaL_checkstring(L, 1);
         void* graphicsDevice = lua_touserdata(L, 2); // ONLY FOR TEST
 
-        if (lua_islightuserdata(L, 2) || lua_isuserdata(L, 2))
-        {
+        if (lua_islightuserdata(L, 2))
             graphicsDevice = lua_touserdata(L, 2);
-        }
-        else if (lua_isnumber(L, 2))
-        {
+        else if (lua_isuserdata(L, 2))
+            graphicsDevice = *(void**)lua_touserdata(L, 2); 
+         if (lua_isnumber(L, 2))
             graphicsDevice = (void*)(uintptr_t)lua_tointeger(L, 2);
-        }
 
         int width, height, channels;
         unsigned char* pixels = stbi_load(path, &width, &height, &channels, 4);
-
         if (!pixels)
         {
-            M_LOGE("Failed to load texture: %s (%s)", path, stbi_failure_reason());
+            M_LOGE("stbi_load failed: %s (%s)", path, stbi_failure_reason());
             lua_pushnil(L);
             return 1;
         }
-        
-        int size = width * height;
 
-        IL2CPP::Il2CppClass* texture2DClass = IL2CPP::Resolver::FindClass("Assembly-CSharp", "Microsoft.Xna.Framework.Graphics", "Texture2D");
-        if (!texture2DClass) 
-        { 
-            M_LOGE("Cannot find Texture2D class!"); 
-            lua_pushnil(L); 
-            return 1; 
-        }
-        IL2CPP::MethodInfo* ctor = Reflections::FindMethod(texture2DClass, ".ctor", 3);
-        if (!ctor) 
-        { 
-            M_LOGE("Cannot find Texture2D.ctor() method!"); 
-            lua_pushnil(L); 
-            return 1; 
-        }
+        IL2CPP::Il2CppClass* xnaTextureClass = IL2CPP::Resolver::FindClass("Assembly-CSharp", "Microsoft.Xna.Framework.Graphics", "Texture2D");
+        IL2CPP::Il2CppClass* unityTextureClass = IL2CPP::Resolver::FindClass("UnityEngine.CoreModule", "UnityEngine", "Texture2D");
 
-        IL2CPP::Il2CppClass* colorClass = IL2CPP::Resolver::FindClass("Assembly-CSharp", "Microsoft.Xna.Framework.Graphics", "Color");
-        if (!colorClass) 
-        { 
-            M_LOGE("Cannot find Color class!"); 
-            lua_pushnil(L); 
-            return 1; 
-        }
-        IL2CPP::Il2CppClass* objectClass = IL2CPP::Resolver::FindClass("Assembly-CSharp", "System", "Object");
-        if (!objectClass) 
-        { 
-            M_LOGE("Cannot find Object class!"); 
-            lua_pushnil(L); 
-            return 1; 
-        }
-
-        void* textureInstance = IL2CPP::object_new(texture2DClass);
-        if (!textureInstance)
+        if (!xnaTextureClass || !unityTextureClass)
         {
-            M_LOGE("Cannot create Texture2D instance!");
+            stbi_image_free(pixels);
             lua_pushnil(L);
             return 1;
         }
 
-        Invoke::CallMethodInternal(L, ctor, [&](lua_State* L) {
-            lua_pushlightuserdata(L, textureInstance);
+        IL2CPP::MethodInfo* unityCtor4 = Reflections::FindMethod(unityTextureClass, ".ctor", 4);
+        void* unityTextureInstance = IL2CPP::object_new(unityTextureClass);
+            
+        if (unityCtor4)
+        {
+            Invoke::CallMethodInternal(L, unityCtor4, [&](lua_State* L) {
+                lua_pushlightuserdata(L, unityTextureInstance);
+                lua_pushinteger(L, width);
+                lua_pushinteger(L, height);
+                lua_pushinteger(L, 4);
+                lua_pushinteger(L, 0);
+            });
+        }
+        else
+        {
+            auto* unityCtor2 = Reflections::FindMethod(unityTextureClass, ".ctor", 2);
+            Invoke::CallMethodInternal(L, unityCtor2, [&](lua_State* L) {
+                lua_pushlightuserdata(L, unityTextureInstance);
+                lua_pushinteger(L, width);
+                lua_pushinteger(L, height);
+            });
+        }
+
+        IL2CPP::MethodInfo* getWritable = Reflections::FindMethod(unityTextureClass, "GetWritableImageData", 1);
+        void* dataPtr = nullptr;
+        if (getWritable)
+        {
+            dataPtr = (void*)Invoke::CallMethodInternal(L, getWritable, [&](lua_State* L) {
+                lua_pushlightuserdata(L, unityTextureInstance);
+                lua_pushinteger(L, 0);
+            });
+        }
+
+        if (!dataPtr)
+        {
+            M_LOGE("GetWritableImageData returned null! Cannot load pixels.");
+            stbi_image_free(pixels);
+            lua_pushnil(L);
+            return 1;
+        }
+
+        auto* getRawSize = Reflections::FindMethod(unityTextureClass, "GetRawImageDataSize", 0);
+        if (getRawSize)
+        {
+            uint64_t sz = (uint64_t)Invoke::CallMethodInternal(L, getRawSize, [&](lua_State* L) {
+                lua_pushlightuserdata(L, unityTextureInstance);
+            });
+            M_LOGI("Raw image data size: %llu (expected: %d)", (unsigned long long)sz, width * height * 4);
+        }
+
+        memcpy(dataPtr, pixels, width * height * 4);
+        stbi_image_free(pixels);
+
+        auto* apply = Reflections::FindMethod(unityTextureClass, "Apply", 0);
+        if (apply)
+        {
+            Invoke::CallMethodInternal(L, apply, [&](lua_State* L) {
+                lua_pushlightuserdata(L, unityTextureInstance);
+            });
+        }
+        else
+        {
+            auto* apply2 = Reflections::FindMethod(unityTextureClass, "Apply", 2);
+            if (apply2)
+            {
+                Invoke::CallMethodInternal(L, apply2, [&](lua_State* L) {
+                    lua_pushlightuserdata(L, unityTextureInstance);
+                    lua_pushinteger(L, 0);
+                    lua_pushinteger(L, 0);
+                });
+            }
+        }
+
+        auto* getWidth = Reflections::FindMethod(unityTextureClass, "get_width", 0);
+        auto* getHeight = Reflections::FindMethod(unityTextureClass, "get_height", 0);
+        if (getWidth && getHeight)
+        {
+            int uw = (int)Invoke::CallMethodInternal(L, getWidth, [&](lua_State* L) {
+                lua_pushlightuserdata(L, unityTextureInstance);
+            });
+            int uh = (int)Invoke::CallMethodInternal(L, getHeight, [&](lua_State* L) {
+                lua_pushlightuserdata(L, unityTextureInstance);
+            });
+            M_LOGI("Unity texture after Apply: %dx%d", uw, uh);
+        }
+
+        auto* xnaCtor1 = Reflections::FindMethod(xnaTextureClass, ".ctor", 1);
+        void* xnaTextureInstance = nullptr;
+
+        if (xnaCtor1)
+        {
+            xnaTextureInstance = IL2CPP::object_new(xnaTextureClass);
+            Invoke::CallMethodInternal(L, xnaCtor1, [&](lua_State* L) {
+                lua_pushlightuserdata(L, xnaTextureInstance);
+                lua_pushlightuserdata(L, unityTextureInstance);
+            });
+
+            auto* unityTexField = Reflections::FindField(xnaTextureClass, "_unityTexture", false);
+            if (unityTexField)
+            {
+                size_t off = IL2CPP::field_get_offset(unityTexField);
+                void* setTex = *(void**)((char*)xnaTextureInstance + off);
+                M_LOGI("After ctor(Texture2D), _unityTexture = %p", setTex);
+
+                if (setTex == unityTextureInstance)
+                {
+                    M_LOGI("SUCCESS: ctor(Texture2D) accepts Unity Texture2D!");
+
+                    auto* renderTexField = Reflections::FindField(xnaTextureClass, "_unityRenderTexture", false);
+                    auto* alphaTexField  = Reflections::FindField(xnaTextureClass, "_unityAlphaTexture", false);
+                    auto* palTexField    = Reflections::FindField(xnaTextureClass, "_unityPalTexture", false);
+
+                    if (renderTexField) 
+                    {
+                        size_t off = IL2CPP::field_get_offset(renderTexField);
+                        void* val = *(void**)((char*)xnaTextureInstance + off);
+
+                        if (val != nullptr) 
+                        {
+                            *(void**)((char*)xnaTextureInstance + off) = nullptr;
+                            M_LOGI("Nulled _unityRenderTexture (was %p)", val);
+                        }
+                    }
+                    if (alphaTexField) 
+                    {
+                        size_t off = IL2CPP::field_get_offset(alphaTexField);
+                        *(void**)((char*)xnaTextureInstance + off) = nullptr;
+                    }
+                    if (palTexField) 
+                    {
+                        size_t off = IL2CPP::field_get_offset(palTexField);
+                        *(void**)((char*)xnaTextureInstance + off) = nullptr;
+                    }
+
+                    auto* textureLoadedField = Reflections::FindField(xnaTextureClass, "_textureLoaded", false);
+                    if (textureLoadedField)
+                    {
+                        size_t off = IL2CPP::field_get_offset(textureLoadedField);
+                        bool* loadedPtr = (bool*)((char*)xnaTextureInstance + off);
+                        if (!*loadedPtr) 
+                        {
+                            *loadedPtr = true;
+                            M_LOGI("Set _textureLoaded = true in success path");
+                        }
+                    }
+
+                    lua_pushlightuserdata(L, xnaTextureInstance);
+                    return 1;
+                }
+                else
+                {
+                    M_LOGW("ctor(Texture2D) did NOT set _unityTexture (got %p, expected %p). Using fallback...", setTex, unityTextureInstance);
+                    xnaTextureInstance = nullptr; 
+                }
+            }
+        }
+
+        M_LOGI("Using fallback constructor...");
+        auto* xnaCtor3 = Reflections::FindMethod(xnaTextureClass, ".ctor", 3);
+        xnaTextureInstance = IL2CPP::object_new(xnaTextureClass);
+
+        auto* renderTexField = Reflections::FindField(xnaTextureClass, "_unityRenderTexture", false);
+        auto* alphaTexField  = Reflections::FindField(xnaTextureClass, "_unityAlphaTexture", false);
+        auto* palTexField    = Reflections::FindField(xnaTextureClass, "_unityPalTexture", false);
+
+        if (renderTexField) *(void**)((char*)xnaTextureInstance + IL2CPP::field_get_offset(renderTexField)) = nullptr;
+        if (alphaTexField)  *(void**)((char*)xnaTextureInstance + IL2CPP::field_get_offset(alphaTexField))  = nullptr;
+        if (palTexField)    *(void**)((char*)xnaTextureInstance + IL2CPP::field_get_offset(palTexField))    = nullptr;
+
+        Invoke::CallMethodInternal(L, xnaCtor3, [&](lua_State* L) {
+            lua_pushlightuserdata(L, xnaTextureInstance);
             lua_pushlightuserdata(L, graphicsDevice);
             lua_pushinteger(L, width);
             lua_pushinteger(L, height);
         });
 
-        IL2CPP::MethodInfo* setPackedValue = Reflections::FindMethod(colorClass, "set_PackedValue", 1);
-        if (!setPackedValue) 
-        { 
-            M_LOGE("Cannot find Color.set_PackedValue() method!"); 
-            lua_pushnil(L); 
-            return 1; 
-        }
-
-        void* objArray = IL2CPP::array_new(objectClass, size);
-        if (!objArray)
+        auto* textureLoadedField = Reflections::FindField(xnaTextureClass, "_textureLoaded", false);
+        if (textureLoadedField)
         {
-            M_LOGE("Cannot create System.Object array!");
-            lua_pushnil(L);
-            return 1;
+            size_t off = IL2CPP::field_get_offset(textureLoadedField);
+            *(bool*)((char*)xnaTextureInstance + off) = true;
         }
 
-        uintptr_t arrayHeader = (uintptr_t)IL2CPP::array_object_header_size();
-
-        for (int i = 0; i < size; ++i)
+        auto* unityTexFieldInfo = Reflections::FindField(xnaTextureClass, "_unityTexture", false);
+        if (unityTexFieldInfo)
         {
-            uint8_t r = pixels[i * 4 + 0];
-            uint8_t g = pixels[i * 4 + 1];
-            uint8_t b = pixels[i * 4 + 2];
-            uint8_t a = pixels[i * 4 + 3];
-
-            uint32_t packedValue = r | (g << 8) | (b << 16) | (a << 24);
-
-            void* boxedColor = IL2CPP::object_new(colorClass);
-
-            Invoke::CallMethodInternal(L, setPackedValue, [&](lua_State* L) {
-                lua_pushlightuserdata(L, boxedColor);
-                lua_pushinteger(L, (lua_Integer)packedValue);
-            });
-
-            uintptr_t elementAddr = (uintptr_t)objArray + arrayHeader + (i * sizeof(void*));
-            *(uintptr_t*)elementAddr = (uintptr_t)boxedColor;
+            IL2CPP::field_set_object((IL2CPP::Il2CppObject*)xnaTextureInstance, unityTexFieldInfo, unityTextureInstance);
         }
 
-        stbi_image_free(pixels);
-
-        uintptr_t il2cppBase = IL2CPP::GetIl2CppBase();
-
-        IL2CPP::MethodInfo* openSetData = Reflections::FindMethod(texture2DClass, "SetData", 3);
-        if (!openSetData) 
-        { 
-            M_LOGE("Cannot find open generinc SetData<T>() method!"); 
-            lua_pushnil(L); 
-            return 1; 
-        }
-        
-        void* reflMethod = IL2CPP::method_get_object(openSetData, texture2DClass);
-        if (!reflMethod)
-        {
-            M_LOGE("il2cpp_method_get_object failed for SetData<T>()");
-            lua_pushnil(L);
-            return 1;
-        }
-
-        IL2CPP::Il2CppClass* typeClass = IL2CPP::Resolver::FindClass("Assembly-CSharp", "System", "Type");
-        const IL2CPP::Il2CppType* objType = IL2CPP::class_get_type(typeClass);
-        IL2CPP::Il2CppObject* objTypeReflection = IL2CPP::type_get_object(objType);
-
-        void* typesArray = IL2CPP::array_new(typeClass, 1);
-        uintptr_t typesHeader = (uintptr_t)IL2CPP::array_object_header_size();
-        *(uintptr_t*)((uintptr_t)typesArray + typesHeader) = (uintptr_t)objTypeReflection;
-
-        IL2CPP::Il2CppClass* reflMethodKlass = IL2CPP::object_get_class(reflMethod);
-        IL2CPP::MethodInfo* makeGeneric = Reflections::FindMethod(reflMethodKlass, "MakeGenericMethod", 1);
-        if (!makeGeneric)
-        {
-            M_LOGE("Cannot find MakeGenericMethod() on reflection method class!");
-            lua_pushnil(L);
-            return 1;
-        }
-
-        uintptr_t closedReflMethod = Invoke::CallMethodInternal(L, makeGeneric, [&](lua_State* L) {
-            lua_pushlightuserdata(L, reflMethod);
-            lua_pushlightuserdata(L, typesArray);
-        });
-
-        if (!closedReflMethod)
-        {
-            M_LOGE("MakeGenericMethod returned null!");
-            lua_pushnil(L);
-            return 1;
-        }
-
-        IL2CPP::MethodInfo* closedSetData = (IL2CPP::MethodInfo*)IL2CPP::method_get_from_reflection((void*)closedReflMethod);
-        if (!closedSetData)
-        {
-            M_LOGE("il2cpp_method_get_from_reflection failed!");
-            lua_pushnil(L);
-            return 1;
-        }
-
-        M_LOGI("We are here");
-        Invoke::CallMethodInternal(L, closedSetData, [&](lua_State* L) {
-            lua_pushlightuserdata(L, textureInstance);
-            lua_pushlightuserdata(L, objArray);
-            lua_pushinteger(L, 0);
-            lua_pushinteger(L, size);
-        });
-
-        lua_pushlightuserdata(L, textureInstance);
+        lua_pushlightuserdata(L, xnaTextureInstance);
         return 1;
     }
 
     void RegisterCore(lua_State* L)
     {
+        stbi_set_flip_vertically_on_load(true);
+
         lua_pushcfunction(L, log_print);
         lua_setfield(L, -2, "log");
 

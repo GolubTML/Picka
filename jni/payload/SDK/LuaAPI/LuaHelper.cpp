@@ -22,8 +22,28 @@ namespace LuaBridge::Helper
             *(int32_t*)addr = lua_tointeger(L, luaValueIdx);
             return;
 
+        case 0x04: 
+            *(int8_t*)addr = (int8_t)lua_tointeger(L, luaValueIdx);
+            return;
+        
         case 0x05:
-            *(int*)addr = lua_tointeger(L, luaValueIdx);
+            *(uint8_t*)addr = (uint8_t)lua_tointeger(L, luaValueIdx);
+            return;
+        
+        case 0x06:
+            *(int16_t*)addr = (int16_t)lua_tointeger(L, luaValueIdx);
+            return;
+
+        case 0x07:
+            *(uint16_t*)addr = (uint16_t)lua_tointeger(L, luaValueIdx);
+            return;
+
+        case 0x0D:
+            *(double*)addr = lua_tonumber(L, luaValueIdx);
+            return;
+
+        case 0x09:
+            *(uint32_t*)addr = (uint32_t)lua_tointeger(L, luaValueIdx);
             return;
 
         case 0x0E:

@@ -11,10 +11,10 @@
 
 namespace API
 {
-    static const char* CLASS_WRAPPER_META = "picka.ClassWrapper";
-    static const char* METHOD_HANDLE_META = "picka.MethodHandle";
-    static const char* STRUCT_WRAPPER_META = "picka.StructWrapper";
-    static const char* ARRAY_WRAPPER_META = "picka.ArrayWrapper";
+    const char* CLASS_WRAPPER_META = "picka.ClassWrapper";
+    const char* METHOD_HANDLE_META = "picka.MethodHandle";
+    const char* STRUCT_WRAPPER_META = "picka.StructWrapper";
+    const char* ARRAY_WRAPPER_META = "picka.ArrayWrapper";
 
     std::unordered_map<IL2CPP::Il2CppClass*, std::unordered_map<std::string, IL2CPP::MethodInfo*>> g_MethodCache;
     std::unordered_map<IL2CPP::Il2CppClass*, std::unordered_map<std::string, void*>> g_FieldCache;
@@ -61,14 +61,6 @@ namespace API
 
         return field;
     }
-
-    // for SomeClass.SomeMethod:hook(function() end)
-    struct MethodHandle
-    {
-        IL2CPP::Il2CppClass* klass;
-        void* instance;
-        std::string name;
-    };
 
     int methodHandle_gc(lua_State* L)
     {
@@ -157,14 +149,6 @@ namespace API
         return 1;
     }
 
-    struct ArrayWrapper
-    {
-        void* arrPtr;
-        IL2CPP::Il2CppClass* elementClass;
-        bool elementAreValueType; // for arrays of pointers, like Main.player, Main.npc
-        size_t elementSize;
-    };
-
     void PushArrayWrapper(lua_State* L, void* arrPtr)
     {
         if (!arrPtr)
@@ -186,12 +170,6 @@ namespace API
         luaL_getmetatable(L, ARRAY_WRAPPER_META);
         lua_setmetatable(L, -2);
     }
-
-    struct StructWrapper
-    {
-        void* base;
-        IL2CPP::Il2CppClass* klass;
-    };
 
     void PushStructWrapper(lua_State* L, void* base, IL2CPP::Il2CppClass* klass)
     {
@@ -257,7 +235,6 @@ namespace API
         return 1;
     }
 
-
     int structWrapper_index(lua_State* L)
     {
         StructWrapper* s = (StructWrapper*)luaL_checkudata(L, 1, STRUCT_WRAPPER_META);
@@ -291,12 +268,6 @@ namespace API
         LuaBridge::Helper::setTypedValue(L, 3, addr, fieldType);
         return 0;
     }
-
-    struct ClassWrapper
-    {
-        IL2CPP::Il2CppClass* klass;
-        void* instance;
-    };
 
     int classWrapper_methodCall(lua_State* L)
     {

@@ -22,7 +22,8 @@ namespace IL2CPP
     REGISTER_IL2CPP_METHOD(Il2CppClass*, object_get_class, (void* instance));
     REGISTER_IL2CPP_METHOD(bool, class_is_valuetype, (const Il2CppClass* klass));
     REGISTER_IL2CPP_METHOD(Il2CppObject*, object_new, (const Il2CppClass* klass));
-
+    REGISTER_IL2CPP_METHOD(uint32_t, object_header_size, ());
+    
     // Method
     REGISTER_IL2CPP_METHOD(const Il2CppType*, method_get_param, (const MethodInfo* method, uint32_t index));
     REGISTER_IL2CPP_METHOD(const char*, method_get_name, (const MethodInfo* methodInfo));
@@ -43,6 +44,8 @@ namespace IL2CPP
     REGISTER_IL2CPP_METHOD(Il2CppType*, field_get_type, (void* field));
     REGISTER_IL2CPP_METHOD(uint32_t, field_get_flags, (void* field));
 
+    void field_set_object(Il2CppObject* obj, void* field, void* value);
+
     REGISTER_IL2CPP_METHOD(Il2CppClass*, class_from_type, (const Il2CppType* type));
     REGISTER_IL2CPP_METHOD(int, type_get_type, (const Il2CppType* type));
     REGISTER_IL2CPP_METHOD(Il2CppObject*, type_get_object, (const Il2CppType* type));
@@ -55,6 +58,9 @@ namespace IL2CPP
     REGISTER_IL2CPP_METHOD(uint32_t, array_length, (void* array));
     REGISTER_IL2CPP_METHOD(uint32_t, array_object_header_size, ());
     REGISTER_IL2CPP_METHOD(Il2CppArray*, array_new, (Il2CppClass* elementTypeInfo, il2cpp_array_size_t length));
+
+    // Garbage Collector
+    REGISTER_IL2CPP_METHOD(void, gc_wbarrier_set_field, (Il2CppObject* obj, void** targetAddr, void* object));
 
     #undef REGISTER_IL2CPP_METHOD
 

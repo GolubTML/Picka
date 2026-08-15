@@ -23,6 +23,7 @@ namespace IL2CPP
     t_class_is_valuetype class_is_valuetype = NULL;
     t_class_get_type class_get_type = NULL;
     t_object_new object_new = NULL;
+    t_object_header_size object_header_size = NULL;
 
     t_method_get_param method_get_param = NULL;
     t_method_get_name method_get_name = NULL;
@@ -46,6 +47,17 @@ namespace IL2CPP
     t_array_length array_length = NULL;
     t_array_object_header_size array_object_header_size = NULL;
     t_array_new array_new = NULL;
+
+    t_gc_wbarrier_set_field gc_wbarrier_set_field = NULL;
+    
+    void field_set_object(Il2CppObject* obj, void* field, void* value)
+    {
+        size_t offset = IL2CPP::field_get_offset(field);
+        void** fieldPtr = (void**)((char*)obj + offset);
+        *fieldPtr = value;
+
+        gc_wbarrier_set_field(obj, fieldPtr, value);
+    }
 
     uintptr_t GetIl2CppBase()
     {
@@ -74,6 +86,7 @@ namespace IL2CPP
         class_value_size = (t_class_value_size)dlsym(handle, "il2cpp_class_value_size");
         class_is_valuetype = (t_class_is_valuetype)dlsym(handle, "il2cpp_class_is_valuetype");
         object_new = (t_object_new)dlsym(handle, "il2cpp_object_new");
+        object_header_size = (t_object_header_size)dlsym(handle, "il2cpp_object_header_size");
 
         method_get_param = (t_method_get_param)dlsym(handle, "il2cpp_method_get_param");
         method_get_name = (t_method_get_name)dlsym(handle, "il2cpp_method_get_name");
@@ -118,5 +131,7 @@ namespace IL2CPP
         array_length = (t_array_length)dlsym(handle, "il2cpp_array_length");
         array_object_header_size = (t_array_object_header_size)dlsym(handle, "il2cpp_array_object_header_size");
         array_new = (t_array_new)dlsym(handle, "il2cpp_array_new");
+
+        gc_wbarrier_set_field = (t_gc_wbarrier_set_field)dlsym(handle, "il2cpp_gc_wbarrier_set_field");
     }
 }

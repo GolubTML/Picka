@@ -92,8 +92,7 @@ namespace Menu
     void InitUnityInput()
     {
         void* inputKlass = IL2CPP::Resolver::FindClass("UnityEngine", "UnityEngine", "Input");
-        void* screenKlass = IL2CPP::Resolver::FindClass("UnityEngine", "UnityEngine", "Screen"); // TODO: make IL2CPP::Resolver::FindMethod with class it self, not with assemblies, namezpace, klass.. 
-
+        void* screenKlass = IL2CPP::Resolver::FindClass("UnityEngine", "UnityEngine", "Screen");
         if (inputKlass) 
         {
             void* mousePos_ptr = IL2CPP::Resolver::FindMethod("UnityEngine", "UnityEngine", "Input", "get_mousePosition", 0);
