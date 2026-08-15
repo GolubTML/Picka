@@ -4,10 +4,13 @@
 
 namespace IL2CPP
 {
+    // TODO: need to refactor this mess
     t_domain_get domain_get = NULL;
     t_domain_get_assemblies domain_get_assemblies = NULL;
     t_assembly_get_image assembly_get_image = NULL;
     t_class_from_name class_from_name = NULL;
+    t_class_get_name class_get_name = NULL;
+    t_class_is_enum class_is_enum = NULL;
     t_class_get_methods class_get_methods = NULL;
     t_class_get_method_from_name class_get_method_from_name = NULL;
     t_class_get_field_from_name class_get_field_from_name = NULL;
@@ -77,6 +80,8 @@ namespace IL2CPP
         domain_get_assemblies = (t_domain_get_assemblies)dlsym(handle, "il2cpp_domain_get_assemblies");
         assembly_get_image = (t_assembly_get_image)dlsym(handle, "il2cpp_assembly_get_image");
         class_from_name = (t_class_from_name)dlsym(handle, "il2cpp_class_from_name");
+        class_get_name = (t_class_get_name)dlsym(handle, "il2cpp_class_get_name");
+        class_is_enum = (t_class_is_enum)dlsym(handle, "il2cpp_class_is_enum");
         class_get_methods = (t_class_get_methods)dlsym(handle, "il2cpp_class_get_methods");
         class_get_method_from_name = (t_class_get_method_from_name)dlsym(handle, "il2cpp_class_get_method_from_name");
         class_get_field_from_name = (t_class_get_field_from_name)dlsym(handle, "il2cpp_class_get_field_from_name");

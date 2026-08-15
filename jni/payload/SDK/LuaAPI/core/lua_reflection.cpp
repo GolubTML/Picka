@@ -75,7 +75,7 @@ namespace Reflections
 
         if (fieldClassIfStruct && IL2CPP::class_is_valuetype(fieldClassIfStruct))
         {
-            API::PushStructWrapper(L, addr, fieldClassIfStruct);
+            API::PushStructWrapper(L, addr, fieldClassIfStruct, false); // <- also can be a problem
             return;
         }
 

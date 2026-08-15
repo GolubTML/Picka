@@ -85,7 +85,7 @@ namespace API
         unsigned char* pixels = stbi_load(path, &width, &height, &channels, 4);
         if (!pixels)
         {
-            M_LOGE("stbi_load failed: %s (%s)", path, stbi_failure_reason());
+            LOGE("stbi_load failed: %s (%s)", path, stbi_failure_reason());
             lua_pushnil(L);
             return 1;
         }
@@ -135,7 +135,7 @@ namespace API
 
         if (!dataPtr)
         {
-            M_LOGE("GetWritableImageData returned null! Cannot load pixels.");
+            LOGE("GetWritableImageData returned null! Cannot load pixels.");
             stbi_image_free(pixels);
             lua_pushnil(L);
             return 1;
@@ -147,7 +147,7 @@ namespace API
             uint64_t sz = (uint64_t)Invoke::CallMethodInternal(L, getRawSize, [&](lua_State* L) {
                 lua_pushlightuserdata(L, unityTextureInstance);
             });
-            M_LOGI("Raw image data size: %llu (expected: %d)", (unsigned long long)sz, width * height * 4);
+            LOGI("Raw image data size: %llu (expected: %d)", (unsigned long long)sz, width * height * 4);
         }
 
         memcpy(dataPtr, pixels, width * height * 4);
@@ -175,15 +175,18 @@ namespace API
 
         auto* getWidth = Reflections::FindMethod(unityTextureClass, "get_width", 0);
         auto* getHeight = Reflections::FindMethod(unityTextureClass, "get_height", 0);
+        int uw = 0;
+        int uh = 0;
+
         if (getWidth && getHeight)
         {
-            int uw = (int)Invoke::CallMethodInternal(L, getWidth, [&](lua_State* L) {
+            uw = (int)Invoke::CallMethodInternal(L, getWidth, [&](lua_State* L) {
                 lua_pushlightuserdata(L, unityTextureInstance);
             });
-            int uh = (int)Invoke::CallMethodInternal(L, getHeight, [&](lua_State* L) {
+            uh = (int)Invoke::CallMethodInternal(L, getHeight, [&](lua_State* L) {
                 lua_pushlightuserdata(L, unityTextureInstance);
             });
-            M_LOGI("Unity texture after Apply: %dx%d", uw, uh);
+            LOGI("Unity texture after Apply: %dx%d", uw, uh);
         }
 
         auto* xnaCtor1 = Reflections::FindMethod(xnaTextureClass, ".ctor", 1);
@@ -202,11 +205,11 @@ namespace API
             {
                 size_t off = IL2CPP::field_get_offset(unityTexField);
                 void* setTex = *(void**)((char*)xnaTextureInstance + off);
-                M_LOGI("After ctor(Texture2D), _unityTexture = %p", setTex);
+                LOGI("After ctor(Texture2D), _unityTexture = %p", setTex);
 
                 if (setTex == unityTextureInstance)
                 {
-                    M_LOGI("SUCCESS: ctor(Texture2D) accepts Unity Texture2D!");
+                    LOGI("SUCCESS: ctor(Texture2D) accepts Unity Texture2D!");
 
                     auto* renderTexField = Reflections::FindField(xnaTextureClass, "_unityRenderTexture", false);
                     auto* alphaTexField  = Reflections::FindField(xnaTextureClass, "_unityAlphaTexture", false);
@@ -220,7 +223,7 @@ namespace API
                         if (val != nullptr) 
                         {
                             *(void**)((char*)xnaTextureInstance + off) = nullptr;
-                            M_LOGI("Nulled _unityRenderTexture (was %p)", val);
+                            LOGI("Nulled _unityRenderTexture (was %p)", val);
                         }
                     }
                     if (alphaTexField) 
@@ -242,22 +245,24 @@ namespace API
                         if (!*loadedPtr) 
                         {
                             *loadedPtr = true;
-                            M_LOGI("Set _textureLoaded = true in success path");
+                            LOGI("Set _textureLoaded = true in success path");
                         }
                     }
+
+                    M_LOGI("Texture created! Size: width %dx%d", uw, uh);
 
                     lua_pushlightuserdata(L, xnaTextureInstance);
                     return 1;
                 }
                 else
                 {
-                    M_LOGW("ctor(Texture2D) did NOT set _unityTexture (got %p, expected %p). Using fallback...", setTex, unityTextureInstance);
+                    LOGW("ctor(Texture2D) did NOT set _unityTexture (got %p, expected %p). Using fallback...", setTex, unityTextureInstance);
                     xnaTextureInstance = nullptr; 
                 }
             }
         }
 
-        M_LOGI("Using fallback constructor...");
+        LOGI("Using fallback constructor...");
         auto* xnaCtor3 = Reflections::FindMethod(xnaTextureClass, ".ctor", 3);
         xnaTextureInstance = IL2CPP::object_new(xnaTextureClass);
 

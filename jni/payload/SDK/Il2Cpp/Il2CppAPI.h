@@ -13,6 +13,8 @@ namespace IL2CPP
 
     // Classes
     REGISTER_IL2CPP_METHOD(Il2CppClass*, class_from_name, (Il2CppImage* image, const char* namezpace, const char* name));
+    REGISTER_IL2CPP_METHOD(const char*, class_get_name, (Il2CppClass* klass));
+    REGISTER_IL2CPP_METHOD(bool, class_is_enum, (Il2CppClass* klass));
     REGISTER_IL2CPP_METHOD(MethodInfo*, class_get_method_from_name, (void* klass, const char* name, int argsCount));
     REGISTER_IL2CPP_METHOD(MethodInfo*, class_get_methods, (Il2CppClass* klass, void** iter));
     REGISTER_IL2CPP_METHOD(void*, class_get_field_from_name, (void* klass, const char* name));

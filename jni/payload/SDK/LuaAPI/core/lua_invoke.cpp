@@ -102,18 +102,8 @@ namespace Invoke
             else 
             {
                 int param_idx = is_static ? i : i - 1;
-                // auto* param = methodInfo->parameters[param_idx];
                 
                 const IL2CPP::Il2CppType* typeStruct = IL2CPP::method_get_param(methodInfo, param_idx);
-                /* uintptr_t addr = (uintptr_t)typeStruct;
-                LOGI("Param %d hex dump: %02X %02X %02X %02X %02X %02X %02X %02X | %02X %02X %02X %02X", 
-                    param_idx,
-                    *(uint8_t*)(addr), *(uint8_t*)(addr+1), *(uint8_t*)(addr+2), *(uint8_t*)(addr+3),
-                    *(uint8_t*)(addr+4), *(uint8_t*)(addr+5), *(uint8_t*)(addr+6), *(uint8_t*)(addr+7),
-                    *(uint8_t*)(addr+8), *(uint8_t*)(addr+9), *(uint8_t*)(addr+10), *(uint8_t*)(addr+11)); 
-                    
-                    LOGI("Method: %s, ParamIdx: %d, TypePtr: %p", methodInfo->name, param_idx, typeStruct);
-                */
                 
                 if (lua_istable(L, lua_idx)) 
                 {
@@ -130,6 +120,62 @@ namespace Invoke
                 }
 
                 uint8_t raw_type = IL2CPP::type_get_type(typeStruct);
+
+                IL2CPP::Il2CppClass* maybeStructClass = (raw_type == 0x11) ? IL2CPP::class_from_type(typeStruct) : nullptr;
+                bool isEnum = maybeStructClass && IL2CPP::class_is_enum(maybeStructClass);
+
+                if (raw_type == 0x11 &&  !isEnum)
+                {
+                    IL2CPP::Il2CppClass* structClass = IL2CPP::class_from_type(typeStruct);
+
+                    uint32_t align = 0;
+                    int size = IL2CPP::class_value_size(structClass, &align);
+
+                    void* structBuffer = alloca(size);
+                    memset(structBuffer, 0, size);
+
+                    if (void* cw = luaL_testudata(L, lua_idx, API::CLASS_WRAPPER_META))
+                    {
+                        API::ClassWrapper* w = (API::ClassWrapper*)cw;
+                        if (w->instance)
+                        {
+                            memcpy(structBuffer, (char*)w->instance + sizeof(IL2CPP::Il2CppObject), size);
+
+                            if (size == 8)
+                            {
+                                float x, y;
+                                memcpy(&x, structBuffer, 4);
+                                memcpy(&y, (char*)structBuffer + 4, 4);
+                                // M_LOGI("Vector2 copied from instance: X=%.2f Y=%.2f (raw instance=%p, header size=%zu)",
+                                //     x, y, w->instance, sizeof(IL2CPP::Il2CppObject));
+                            }
+                        }
+                    }
+                    else if (void* sw = luaL_testudata(L, lua_idx, API::STRUCT_WRAPPER_META))
+                    {
+                        API::StructWrapper* s = (API::StructWrapper*)sw;
+                        if (s->base)
+                            memcpy(structBuffer, s->base, size);
+                    }
+                    else if (lua_islightuserdata(L, lua_idx))
+                    {
+                        void* raw = lua_touserdata(L, lua_idx);
+                        if (raw)
+                            memcpy(structBuffer, (char*)raw + sizeof(IL2CPP::Il2CppObject), size);
+                    }
+
+                    arg_types[i] = build_struct_ffi_type(structClass);
+                    arg_values[i] = structBuffer;
+                    continue;
+                }
+
+                if (raw_type == 0x11 && isEnum)
+                {
+                    storage[i].i = (int32_t)lua_tointeger(L, lua_idx);
+                    arg_types[i] = &ffi_type_sint32;
+                    arg_values[i] = &storage[i];
+                    continue;
+                }
 
                 ffi_type* f_type = get_ffi_type(raw_type);
                 arg_types[i] = f_type;

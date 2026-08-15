@@ -171,17 +171,7 @@ namespace API
         lua_setmetatable(L, -2);
     }
 
-    void PushStructWrapper(lua_State* L, void* base, IL2CPP::Il2CppClass* klass)
-    {
-        StructWrapper* s = (StructWrapper*)lua_newuserdata(L, sizeof(StructWrapper));
-        s->base = base;
-        s->klass = klass;
-
-        luaL_getmetatable(L, STRUCT_WRAPPER_META);
-        lua_setmetatable(L, -2);    
-    }
-
-    static int arrayWrapper_index(lua_State* L)
+    int arrayWrapper_index(lua_State* L)
     {
         ArrayWrapper* a = (ArrayWrapper*)luaL_checkudata(L, 1, ARRAY_WRAPPER_META);
         int index = (int)luaL_checkinteger(L, 2);
@@ -195,7 +185,7 @@ namespace API
 
         if (a->elementAreValueType)
         {
-            API::PushStructWrapper(L, (void*)elementAddr, a->elementClass);
+            API::PushStructWrapper(L, (void*)elementAddr, a->elementClass, false); // <- can be a potential problem
             return 1;
         }
 
@@ -207,7 +197,7 @@ namespace API
 
         return 1;
     }
-    static int arrayWrapper_newindex(lua_State* L)
+    int arrayWrapper_newindex(lua_State* L)
     {
         ArrayWrapper* a = (ArrayWrapper*)luaL_checkudata(L, 1, ARRAY_WRAPPER_META);
         int index = (int)luaL_checkinteger(L, 2);
@@ -228,11 +218,22 @@ namespace API
         *(uintptr_t*)elementAddr = value;
         return 0;
     }
-    static int arrayWrapper_len(lua_State* L)
+    int arrayWrapper_len(lua_State* L)
     {
         ArrayWrapper* a = (ArrayWrapper*)luaL_checkudata(L, 1, ARRAY_WRAPPER_META);
         lua_pushinteger(L, (lua_Integer)IL2CPP::array_length(a->arrPtr));
         return 1;
+    }
+
+    void PushStructWrapper(lua_State* L, void* base, IL2CPP::Il2CppClass* klass, bool ownsMemory)
+    {
+        StructWrapper* s = (StructWrapper*)lua_newuserdata(L, sizeof(StructWrapper));
+        s->base = base;
+        s->klass = klass;
+        s->ownsMemory = ownsMemory;
+
+        luaL_getmetatable(L, STRUCT_WRAPPER_META);
+        lua_setmetatable(L, -2);    
     }
 
     int structWrapper_index(lua_State* L)
@@ -244,6 +245,9 @@ namespace API
         if (!fieldInfo) return luaL_error(L, "Struct field '%s' not found", key);
 
         size_t offset = IL2CPP::field_get_offset(fieldInfo);
+        if (offset >= sizeof(IL2CPP::Il2CppObject))
+            offset -= sizeof(IL2CPP::Il2CppObject);
+
         void* addr = (char*)s->base + offset;
         
         const IL2CPP::Il2CppType* fieldType = IL2CPP::field_get_type(fieldInfo);
@@ -261,6 +265,9 @@ namespace API
         if (!fieldInfo) return luaL_error(L, "Struct field '%s' not found", key);
 
         size_t offset = IL2CPP::field_get_offset(fieldInfo);
+        if (offset >= sizeof(IL2CPP::Il2CppObject))
+            offset -= sizeof(IL2CPP::Il2CppObject);
+
         void* addr = (char*)s->base + offset;
         
         const IL2CPP::Il2CppType* fieldType = IL2CPP::field_get_type(fieldInfo);
@@ -269,59 +276,67 @@ namespace API
         return 0;
     }
 
-    int classWrapper_methodCall(lua_State* L)
+    int structWrapper_gc(lua_State* L)
     {
-        IL2CPP::Il2CppClass* klass = (IL2CPP::Il2CppClass*)lua_touserdata(L, lua_upvalueindex(1));
-        void* instance = lua_touserdata(L, lua_upvalueindex(2));
-        const char* methodName = lua_tostring(L, lua_upvalueindex(3));
-
-        int argc = lua_gettop(L);
-
-        IL2CPP::MethodInfo* methodInfo = cacheMethodInfo(klass, methodName, argc);
-        if (!methodInfo)
-            return luaL_error(L, "Method '%s' with %d args not found", methodName, argc);
-
-        bool isStatic = (methodInfo->flags & 0x0010);
-
-        if (!isStatic)
+        StructWrapper* s = (StructWrapper*)luaL_checkudata(L, 1, STRUCT_WRAPPER_META);
+        if (s->ownsMemory && s->base)
         {
-            lua_pushlightuserdata(L, instance);
-            lua_insert(L, 1);
+            free(s->base);
+            s->base = nullptr;
         }
 
-        uintptr_t result = Invoke::CallMethod(L, methodInfo, 1);
-        lua_pushinteger(L, (lua_Integer)result);
-
-        return 1;
+        return 0;
     }
 
     int classWrapper_ctorCall(lua_State* L)
     {
         IL2CPP::Il2CppClass* klass = (IL2CPP::Il2CppClass*)lua_touserdata(L, lua_upvalueindex(1));
-
+        
         int argc = lua_gettop(L);
 
         IL2CPP::MethodInfo* ctor = cacheMethodInfo(klass, ".ctor", argc);
         if (!ctor)
             return luaL_error(L, "Constructor with %d args not found for this class", argc);
 
-        IL2CPP::Il2CppObject* instance = IL2CPP::object_new(klass);
-        if (!instance)
-            return luaL_error(L, "il2cpp_object_new returned null - failed to allocate instance");
-    
-        lua_pushlightuserdata(L, instance);
-        lua_insert(L, 1);
+        bool isValueType = IL2CPP::class_is_valuetype(klass);
+        if (isValueType)
+        {
+            uint32_t align = 0;
+            int size = IL2CPP::class_value_size(klass, &align);
 
-        Invoke::CallMethod(L, ctor, 1);
+            void* buffer = malloc(size);
+            if (!buffer)
+                M_LOGE("Cannot allocate buffer for static struct (%d)!", size);
+            memset(buffer, 0, size);
 
-        ClassWrapper* w = (ClassWrapper*)lua_newuserdata(L, sizeof(ClassWrapper));
-        w->klass = klass;
-        w->instance = instance;
+            lua_pushlightuserdata(L, buffer);
+            lua_insert(L, 1);
 
-        luaL_getmetatable(L, CLASS_WRAPPER_META);
-        lua_setmetatable(L, -2);
+            Invoke::CallMethod(L, ctor, 1);
 
-        return 1;
+            PushStructWrapper(L, buffer, klass, true);
+            return 1;
+        }
+        else
+        {
+            IL2CPP::Il2CppObject* instance = IL2CPP::object_new(klass);
+            if (!instance)
+                return luaL_error(L, "il2cpp_object_new returned null - failed to allocate instance");
+            
+            lua_pushlightuserdata(L, instance);
+            lua_insert(L, 1);
+
+            Invoke::CallMethod(L, ctor, 1);
+
+            ClassWrapper* w = (ClassWrapper*)lua_newuserdata(L, sizeof(ClassWrapper));
+            w->klass = klass;
+            w->instance = instance;
+
+            luaL_getmetatable(L, CLASS_WRAPPER_META);
+            lua_setmetatable(L, -2);
+
+            return 1;
+        }
     }
 
     int classWrapper_index(lua_State* L)
@@ -497,6 +512,8 @@ namespace API
         lua_setfield(L, -2, "__index");
         lua_pushcfunction(L, structWrapper_newindex);
         lua_setfield(L, -2, "__newindex");
+        lua_pushcfunction(L, structWrapper_gc);
+        lua_setfield(L, -2, "__gc");
         lua_pop(L, 1);
 
         lua_pushcfunction(L, lua_pickaClass);

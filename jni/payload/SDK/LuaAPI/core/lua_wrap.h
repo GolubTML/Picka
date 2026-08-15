@@ -30,6 +30,7 @@ namespace API
     {
         void* base;
         IL2CPP::Il2CppClass* klass;
+        bool ownsMemory;
     };
 
     struct ClassWrapper
@@ -49,12 +50,12 @@ namespace API
     static int arrayWrapper_newindex(lua_State* L);
     static int arrayWrapper_len(lua_State* L);
 
-    void PushStructWrapper(lua_State* L, void* base, IL2CPP::Il2CppClass* klass);
+    void PushStructWrapper(lua_State* L, void* base, IL2CPP::Il2CppClass* klass, bool ownsMemory);
 
     static int structWrapper_index(lua_State* L);
     static int structWrapper_newindex(lua_State* L);
+    static int structWrapper_gc(lua_State* L);
 
-    static int classWrapper_methodCall(lua_State* L);
     static int classWrapper_ctorCall(lua_State* L);
     static int classWrapper_index(lua_State* L);
     static int classWrapper_newindex(lua_State* L);

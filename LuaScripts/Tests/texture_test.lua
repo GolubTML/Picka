@@ -23,17 +23,20 @@ local spriteBatch = picka.wrap(Main.spriteBatch)
 picka.log("Get spriteBatch: " .. tostring(spriteBatch))
 
 local newPos = Vector2.new(500, 700)
-
-local told = false
+picka.log(type(newPos))
+picka.log("Vector X before hook: " .. newPos.X .. " Y: " .. newPos.Y)
+local told = false;
 
 Main.DrawItem:hook(function (original, item, whoami)
-    
+    picka.callNative(original, item, whoami)
+
     if not told then
-        picka.log("DrawItem hook fired, texture ptr = " .. tostring(testTexture))
+        picka.log("Vector X: " .. newPos.X .. " Y: " .. newPos.Y)
         told = true
     end
-
-    picka.callNative(original, item, whoami)
     
-    spriteBatch.Draw(testTexture, { X = 400, Y = 500 }, { A = 255, B = 255, G = 255, R = 255 })
+    spriteBatch.Draw(testTexture, newPos, Color.White)
+
+    newPos.X = newPos.X + 0.01
+    newPos.Y = newPos.Y - 0.01
 end)
